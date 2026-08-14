@@ -1,0 +1,43 @@
+# Render blueprint for the Cascade backend.
+#
+# Free tier: 512 MB RAM, and the service is spun down after 15 minutes idle. The
+# keep-alive cron below pings /health so a student's first question does not pay
+# a cold start. Secrets are set in the Render dashboard, never here.
+
+services:
+  - type: web
+    name: cascade-api
+    runtime: docker
+    plan: free
+    region: singapore # nearest free region to Bangladesh
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      # Set in the dashboard, not committed.
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GOOGLE_AI_STUDIO_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+
+  # Render's free web services sleep when idle. A ping every 10 minutes keeps the
+  # container warm; without it the first request after a lull takes ~50 seconds,
+  # which reads as a broken site rather than a sleeping one.
+  - type: cron
+    name: cascade-keepalive
+    runtime: docker
+    plan: free
+    schedule: "*/10 * * * *"
+    dockerfilePath: ./ops/keepalive/Dockerfile
+    dockerContext: ./ops/keepalive
+    envVars:
+      - key: TARGET_URL
+        sync: false
