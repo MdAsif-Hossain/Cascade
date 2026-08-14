@@ -109,6 +109,10 @@ class EmbeddingClient:
     def _key(text: str) -> str:
         return hashlib.sha256(text.encode("utf-8")).hexdigest()[:32]
 
+    def has_cached(self, text: str) -> bool:
+        """True when this text can be embedded without a network call."""
+        return self._key(text) in self._cache
+
     def _load(self) -> None:
         if not self._cache_path.exists():
             return

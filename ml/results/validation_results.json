@@ -1,0 +1,38 @@
+[
+  {
+    "model_name": "logistic",
+    "feature_set": "handcrafted",
+    "accuracy": 0.38926174496644295,
+    "macro_f1": 0.22651072124756336
+  },
+  {
+    "model_name": "boosting",
+    "feature_set": "handcrafted",
+    "accuracy": 0.8322147651006712,
+    "macro_f1": 0.32934472934472936
+  },
+  {
+    "model_name": "logistic",
+    "feature_set": "embedding",
+    "accuracy": 0.6375838926174496,
+    "macro_f1": 0.3018718753633299
+  },
+  {
+    "model_name": "boosting",
+    "feature_set": "embedding",
+    "accuracy": 0.8053691275167785,
+    "macro_f1": 0.39348370927318294
+  },
+  {
+    "model_name": "logistic",
+    "feature_set": "both",
+    "accuracy": 0.6711409395973155,
+    "macro_f1": 0.3038538188782773
+  },
+  {
+    "model_name": "boosting",
+    "feature_set": "both",
+    "accuracy": 0.8120805369127517,
+    "macro_f1": 0.42025019006151076
+  }
+]

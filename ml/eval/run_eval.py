@@ -46,6 +46,7 @@ from training_data import (  # noqa: E402
     labels_to_array,
     load_labelled,
     majority_baseline_accuracy,
+    restrict_to_embedded,
     make_splits,
 )
 
@@ -129,7 +130,7 @@ def main(force: bool) -> None:
     metadata = json.loads((ARTIFACT_DIR / "metadata.json").read_text(encoding="utf-8"))
     feature_set = metadata["feature_set"]
 
-    rows = load_labelled()
+    rows = restrict_to_embedded(load_labelled())
     splits = make_splits(rows)
     y_test = labels_to_array(splits.test)
 

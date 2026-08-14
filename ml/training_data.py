@@ -15,7 +15,7 @@ from dataclasses import dataclass
 import numpy as np
 from sklearn.model_selection import train_test_split
 
-from features import Sample
+from features import EmbeddingClient, Sample
 
 LABELS_PATH = pathlib.Path(__file__).parent / "data" / "labeled" / "labels.jsonl"
 
@@ -37,6 +37,24 @@ class LabelledQuestion:
 
     def to_sample(self) -> Sample:
         return Sample(text=self.text, subject=self.subject, num_choices=self.num_choices)
+
+
+def restrict_to_embedded(rows: list[LabelledQuestion]) -> list[LabelledQuestion]:
+    """Keep only questions whose embedding is already cached on disk.
+
+    The free embedding tier allows roughly 1,000 requests per day, which ran out
+    at 993 of the 1,249 labelled questions. Rather than train on one feature set
+    today and another tomorrow — leaving the ablation comparing models fitted to
+    different data — every script restricts to the same embedded subset, so all
+    three feature sets are measured on identical rows.
+
+    The subset is not cherry-picked: embeddings were requested in split order, so
+    it is the whole training split plus a random portion of validation, and the
+    subset is re-split stratified afterwards. The cost is statistical power, and
+    the final report states the reduced size rather than quoting 1,249.
+    """
+    embedder = EmbeddingClient(api_key="")  # no key needed; only the cache is read
+    return [row for row in rows if embedder.has_cached(row.text)]
 
 
 def load_labelled(path: pathlib.Path = LABELS_PATH) -> list[LabelledQuestion]:

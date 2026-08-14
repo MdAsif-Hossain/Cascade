@@ -36,6 +36,7 @@ from training_data import (  # noqa: E402
     labels_to_array,
     load_labelled,
     majority_baseline_accuracy,
+    restrict_to_embedded,
     make_splits,
 )
 
@@ -67,7 +68,7 @@ def build_matrices(
 
 
 def main() -> None:
-    rows = load_labelled()
+    rows = restrict_to_embedded(load_labelled())
     splits = make_splits(rows)
     y_train = labels_to_array(splits.train)
     y_val = labels_to_array(splits.val)

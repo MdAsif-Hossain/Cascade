@@ -30,7 +30,13 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 from features import EmbeddingClient, build_handcrafted_matrix  # noqa: E402
 from train_classifier import load_keys  # noqa: E402
-from training_data import TIERS, labels_to_array, load_labelled, make_splits  # noqa: E402
+from training_data import (  # noqa: E402
+    TIERS,
+    labels_to_array,
+    load_labelled,
+    make_splits,
+    restrict_to_embedded,
+)
 
 ARTIFACT_DIR = pathlib.Path(__file__).resolve().parents[2] / "backend" / "artifacts"
 RESULTS_DIR = pathlib.Path(__file__).resolve().parents[1] / "results"
@@ -50,7 +56,7 @@ def build_matrix(rows: list, feature_set: str, embedder: EmbeddingClient) -> np.
 
 def main() -> None:
     metadata = json.loads((ARTIFACT_DIR / "metadata.json").read_text(encoding="utf-8"))
-    rows = load_labelled()
+    rows = restrict_to_embedded(load_labelled())
     splits = make_splits(rows)
     y_val = labels_to_array(splits.val)
 

@@ -43,6 +43,7 @@ from training_data import (
     labels_to_array,
     load_labelled,
     majority_baseline_accuracy,
+    restrict_to_embedded,
     make_splits,
 )
 
@@ -168,7 +169,13 @@ def evaluate(model: Pipeline, x: np.ndarray, y: np.ndarray, name: str, feature_s
 
 
 def main() -> None:
-    rows: list[LabelledQuestion] = load_labelled()
+    all_rows: list[LabelledQuestion] = load_labelled()
+    rows = restrict_to_embedded(all_rows)
+    if len(rows) < len(all_rows):
+        print(
+            f"embedding quota limited this run to {len(rows)} of {len(all_rows)} "
+            "labelled questions; all feature sets use the same subset"
+        )
     splits = make_splits(rows)
     print(f"labelled rows: {len(rows)}  ({splits.summary()})")
 

@@ -1,0 +1,29 @@
+{
+  "buckets": [
+    {
+      "range": "0.6-0.7",
+      "n": 7,
+      "mean_confidence": 0.6482,
+      "accuracy": 0.7143,
+      "gap": 0.0661
+    },
+    {
+      "range": "0.7-0.8",
+      "n": 8,
+      "mean_confidence": 0.7469,
+      "accuracy": 0.375,
+      "gap": -0.3719
+    },
+    {
+      "range": "0.8-1.0",
+      "n": 134,
+      "mean_confidence": 0.9494,
+      "accuracy": 0.8433,
+      "gap": -0.1061
+    }
+  ],
+  "expected_calibration_error": 0.1185,
+  "under_predicted_rate": 0.1342,
+  "over_predicted_rate": 0.0537,
+  "split": "validation"
+}
