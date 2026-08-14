@@ -355,12 +355,12 @@ Complete each phase before starting the next. Do not work ahead.
 - [x] `docs/proposal.md` (1–2 pages)
 
 ### Phase 1 — Provider layer
-- [ ] `providers/base.py` contract
-- [ ] **Contract test suite, written first**
-- [ ] Three adapters, all passing the suite
-- [ ] Retry, backoff, circuit breaker
-- [ ] Tier definitions with published pricing table
-- [ ] Milestone: one question routed to a hardcoded tier returns an answer
+- [x] `providers/base.py` contract
+- [x] **Contract test suite, written first** (28 shared assertions per adapter)
+- [x] Three adapters, all passing the suite
+- [x] Retry, backoff, circuit breaker
+- [x] Tier definitions with published pricing table — every model verified callable 2026-08-14; see `docs/adr/0002-catalog-listing-is-not-callability.md`
+- [x] Milestone: one question routed to a hardcoded tier returns an answer (T1 via Groq, 684 ms; failover to Gemini verified live)
 
 ### Phase 2 — Intelligence (the core)
 - [ ] `label_empirical.py` — generate labels, cache all responses
