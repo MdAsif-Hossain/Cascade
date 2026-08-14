@@ -193,4 +193,5 @@ class Router:
             retry_after = exc.retry_after
             if retry_after is not None and retry_after > 0:
                 return min(float(retry_after), MAX_RETRY_WAIT_SECONDS)
-        return min(RETRY_BACKOFF_SECONDS * (2 ** (attempt - 1)), MAX_RETRY_WAIT_SECONDS)
+        # 2.0 rather than 2: int ** int widens to Any under mypy --strict.
+        return min(RETRY_BACKOFF_SECONDS * (2.0 ** (attempt - 1)), MAX_RETRY_WAIT_SECONDS)
