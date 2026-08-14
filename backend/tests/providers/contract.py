@@ -139,6 +139,14 @@ class ProviderContractSuite(abc.ABC):
         result = await self.complete(self.build())
         assert result.finish_reason
 
+    @respx.mock
+    async def test_finish_reason_is_case_normalised(self):
+        # Groq answers "stop" and Gemini answers "STOP" for the same outcome.
+        # Callers must not have to know which provider they are talking to.
+        respx.post(self.completions_url).respond(200, json=self.success_body(finish_reason="STOP"))
+        result = await self.complete(self.build())
+        assert result.finish_reason == "stop"
+
     # --- the 200-with-no-answer case ----------------------------------------
 
     @respx.mock

@@ -62,6 +62,18 @@ class Completion(BaseModel):
             raise ValueError("completion text is blank")
         return v
 
+    @field_validator("finish_reason")
+    @classmethod
+    def _normalise_finish_reason(cls, v: str) -> str:
+        """Fold case so callers can compare finish reasons without knowing the provider.
+
+        Live calls return ``"stop"`` from Groq and ``"STOP"`` from Gemini for the
+        same outcome. Anything downstream that branches on this value — the
+        verifier's truncation heuristic especially — would silently miss one
+        provider's spelling.
+        """
+        return v.strip().lower()
+
     @property
     def total_tokens(self) -> int:
         return self.prompt_tokens + self.completion_tokens
