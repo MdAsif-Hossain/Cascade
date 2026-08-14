@@ -67,13 +67,16 @@ EMBED_DIMENSIONS = 256
 
 CACHE_PATH = pathlib.Path(__file__).parent / "data" / "raw" / "embeddings.jsonl"
 
-MAX_EMBED_RETRIES = 8
+MAX_EMBED_RETRIES = 12
 RETRY_BASE_SECONDS = 20.0
+MAX_RETRY_WAIT_SECONDS = 120.0
 
-# Spacing between uncached calls. The free embedding tier throttles on requests
-# per minute, so a steady trickle finishes sooner than a burst that trips a 429
-# and then has to wait out a much longer penalty.
-REQUEST_SPACING_SECONDS = 0.4
+# Spacing between uncached calls. The free embedding tier throttles on sustained
+# request rate, and the throttle outlasts a short backoff: a run at ~69 req/min
+# sailed through 874 embeddings and then hit a 429 that persisted past seven
+# minutes of retries. One request per second stays under it, and the retry ladder
+# below is deliberately patient enough to outlast the throttle if it trips again.
+REQUEST_SPACING_SECONDS = 1.0
 
 
 def _retry_after(response: httpx.Response) -> float | None:
@@ -149,7 +152,9 @@ class EmbeddingClient:
             if response.status_code == 429:
                 if attempt == MAX_EMBED_RETRIES:
                     response.raise_for_status()
-                wait = _retry_after(response) or min(RETRY_BASE_SECONDS * attempt, 60.0)
+                wait = _retry_after(response) or min(
+                    RETRY_BASE_SECONDS * attempt, MAX_RETRY_WAIT_SECONDS
+                )
                 print(f"    rate limited, waiting {wait:.0f}s (attempt {attempt})")
                 time.sleep(wait)
                 continue
