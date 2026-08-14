@@ -21,7 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.api.deps import build_state, get_state, set_state
+from app.api.deps import get_state, set_state
 from app.api.v1.routes import ask as ask_routes
 from app.api.v1.routes import health as health_routes
 from app.api.v1.routes import metrics as metrics_routes
@@ -57,8 +57,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     configure_logging(settings.log_level, json_output=settings.environment != "development")
 
     create_tables()
-    state = build_state(settings)
-    set_state(state)
+    # get_state builds on first access but keeps anything already installed, so a
+    # test (or a future embedding of the app) can inject its own wiring without
+    # having it silently replaced at startup.
+    state = get_state()
 
     # An immediate first poll means /catalog has real data from the start rather
     # than an empty table until the first hour elapses.
