@@ -273,4 +273,8 @@ class ProviderContractSuite(abc.ABC):
         route = respx.post(self.completions_url).respond(200, json=self.success_body())
         await self.complete(self.build())
         sent = route.calls.last.request
-        assert "test-key-not-real" in str(sent.headers) or "test-key-not-real" in str(sent.url)
+        # Providers differ on where the key goes (bearer header vs. a custom
+        # header), so accept any of them rather than encoding one convention.
+        # httpx redacts secrets in str(headers), so read the values directly.
+        carried = list(sent.headers.values()) + [str(sent.url)]
+        assert any("test-key-not-real" in value for value in carried)
