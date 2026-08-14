@@ -18,7 +18,7 @@ from app.providers._openai_compat import OpenAICompatProvider
 
 class OpenRouterProvider(OpenAICompatProvider):
     name: ClassVar[str] = "openrouter"
-    base_url = "https://openrouter.ai/api/v1"
+    base_url: ClassVar[str] = "https://openrouter.ai/api/v1"
 
     # OpenRouter attributes traffic to an app via these headers and surfaces the
     # title in its dashboard. Sending them keeps our free-tier usage identifiable

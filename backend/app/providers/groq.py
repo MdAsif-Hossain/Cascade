@@ -15,4 +15,4 @@ from app.providers._openai_compat import OpenAICompatProvider
 
 class GroqProvider(OpenAICompatProvider):
     name: ClassVar[str] = "groq"
-    base_url = "https://api.groq.com/openai/v1"
+    base_url: ClassVar[str] = "https://api.groq.com/openai/v1"
