@@ -1,0 +1,8 @@
+# Test and lint tooling. Installed in CI and locally, never in the Docker image.
+-r requirements.txt
+
+pytest==8.3.3
+pytest-asyncio==0.24.0
+respx==0.23.1
+ruff==0.7.4
+mypy==1.13.0

@@ -1,15 +1,28 @@
-# Runtime and tooling dependencies are added in the phase that first uses them,
-# so every entry has a visible reason. See CLAUDE.md section 4 for the approved stack.
+# Runtime dependencies only — this file is what the Docker image installs, and
+# the free tier gives us 512 MB. Test and lint tooling lives in
+# requirements-dev.txt so it never ships to production.
+#
+# Every entry is from the approved stack in CLAUDE.md section 4.
 
-# --- Phase 1: provider layer ---
-httpx==0.28.1
+# --- Web ---
+fastapi==0.141.1
+uvicorn==0.52.3
 pydantic==2.13.4
 pydantic-settings==2.15.0
+
+# --- Provider calls (async only; never `requests`) ---
+httpx==0.28.1
 tenacity==9.1.4
 
-# --- Tooling ---
-pytest==8.3.3
-pytest-asyncio==0.24.0
-respx==0.23.1
-ruff==0.7.4
-mypy==1.13.0
+# --- Persistence ---
+SQLAlchemy==2.0.52
+alembic==1.19.1
+
+# --- Classifier ---
+# scikit-learn is the single largest install here. It is present only to load and
+# call the persisted pipeline; nothing is trained in the backend.
+scikit-learn==1.9.0
+joblib==1.5.3
+
+# --- Logging ---
+structlog==26.1.0
