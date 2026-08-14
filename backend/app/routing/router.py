@@ -18,7 +18,7 @@ import asyncio
 from dataclasses import dataclass, field
 
 from app.core.config import Settings, get_settings
-from app.core.errors import ProviderError
+from app.core.errors import ProviderError, ProviderRateLimitError
 from app.providers.base import Completion, Message, Provider
 from app.providers.gemini import GeminiProvider
 from app.providers.groq import GroqProvider
@@ -189,7 +189,8 @@ class Router:
     @staticmethod
     def _backoff_for(exc: ProviderError, attempt: int) -> float:
         """Prefer the provider's own Retry-After hint over our exponential guess."""
-        retry_after = getattr(exc, "retry_after", None)
-        if isinstance(retry_after, int | float) and retry_after > 0:
-            return min(float(retry_after), MAX_RETRY_WAIT_SECONDS)
+        if isinstance(exc, ProviderRateLimitError):
+            retry_after = exc.retry_after
+            if retry_after is not None and retry_after > 0:
+                return min(float(retry_after), MAX_RETRY_WAIT_SECONDS)
         return min(RETRY_BACKOFF_SECONDS * (2 ** (attempt - 1)), MAX_RETRY_WAIT_SECONDS)
