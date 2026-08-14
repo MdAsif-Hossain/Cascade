@@ -42,3 +42,7 @@ Thumbs.db
 
 # --- Logs ---
 *.log
+
+# Local SQLite database created on first run
+*.db
+*.sqlite3
