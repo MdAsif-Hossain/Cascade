@@ -61,29 +61,42 @@ class ModelSpec:
         ) / 1_000_000
 
 
+# Every model below was called successfully on its free tier on 2026-08-14 before
+# being listed here. That check is not optional: Gemini's catalog endpoint still
+# advertises gemini-2.5-flash and gemini-2.5-pro, but both return HTTP 404 ("no
+# longer available to new users") when actually called. A model appearing in a
+# catalog is not evidence that it can be used, which is why the poller has to
+# treat listing and callability as separate facts.
+
 # T1 — small fast models. Factual recall, definitions, simple arithmetic.
 _T1: tuple[ModelSpec, ...] = (
     ModelSpec("groq", "llama-3.1-8b-instant", 0.05, 0.08, "meta-llama/llama-3.1-8b-instruct"),
+    ModelSpec("gemini", "gemini-3.5-flash-lite", 0.30, 2.50, "google/gemini-3.5-flash-lite"),
     ModelSpec("openrouter", "openai/gpt-oss-20b:free", 0.03, 0.13, "openai/gpt-oss-20b"),
-    ModelSpec("gemini", "gemini-flash-lite-latest", 0.10, 0.40, "google/gemini-2.5-flash-lite"),
 )
 
 # T2 — mid models. Multi-step reasoning, explanation, short derivations.
 _T2: tuple[ModelSpec, ...] = (
     ModelSpec("groq", "llama-3.3-70b-versatile", 0.10, 0.32, "meta-llama/llama-3.3-70b-instruct"),
     ModelSpec("groq", "openai/gpt-oss-120b", 0.03, 0.17, "openai/gpt-oss-120b"),
-    ModelSpec("gemini", "gemini-2.5-flash", 0.30, 2.50, "google/gemini-2.5-flash"),
+    ModelSpec("gemini", "gemini-3.1-flash-lite", 0.25, 1.50, "google/gemini-3.1-flash-lite"),
 )
 
 # T3 — strongest free models available. Hard multi-step maths, subtle reasoning.
+#
+# Band membership follows published price, which is the only capability signal
+# available that is public, numeric, and checkable. Model names are not a reliable
+# ordering: Google prices gemini-3.5-flash at four times gemini-3.7-flash despite
+# the higher version number.
 _T3: tuple[ModelSpec, ...] = (
-    ModelSpec("gemini", "gemini-2.5-pro", 1.25, 10.00, "google/gemini-2.5-pro"),
+    ModelSpec("gemini", "gemini-3.5-flash", 1.50, 9.00, "google/gemini-3.5-flash"),
+    ModelSpec("gemini", "gemini-3.7-flash", 0.375, 1.875, "google/gemini-3.7-flash"),
     ModelSpec(
         "openrouter",
-        "nvidia/nemotron-3-ultra-550b-a55b:free",
-        0.60,
-        3.60,
-        "nvidia/nemotron-3-ultra-550b-a55b",
+        "nvidia/nemotron-3-super-120b-a12b:free",
+        0.085,
+        0.40,
+        "nvidia/nemotron-3-super-120b-a12b",
     ),
 )
 

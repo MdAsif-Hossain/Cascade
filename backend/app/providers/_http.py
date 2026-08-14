@@ -62,11 +62,10 @@ def extract_error_message(response: httpx.Response) -> str:
 
 def raise_for_status(provider: str, response: httpx.Response, model: str | None = None) -> None:
     """Translate an HTTP failure into Cascade's error vocabulary."""
-    if response.is_success:
+    status, message = _effective_status(provider, response)
+    if status is None:
         return
 
-    status = response.status_code
-    message = extract_error_message(response)
     kwargs: dict[str, Any] = {"status_code": status, "model": model}
 
     if status in (401, 403):
@@ -80,3 +79,36 @@ def raise_for_status(provider: str, response: httpx.Response, model: str | None 
     if status >= 500:
         raise ProviderUnavailableError(provider, message, **kwargs)
     raise ProviderError(provider, message, **kwargs)
+
+
+def _effective_status(provider: str, response: httpx.Response) -> tuple[int | None, str]:
+    """Return the status that actually describes the outcome, or None if it succeeded.
+
+    A gateway can report an upstream failure inside a 200 response. OpenRouter
+    does exactly this — it proxies other providers, and an upstream 502 arrives
+    as ``HTTP 200 {"error": {"message": "Upstream error from Nvidia", "code":
+    502}}``. Observed live while verifying tier models.
+
+    Trusting the HTTP status alone would classify that as a malformed-response
+    bug and mark it not-retryable, when it is really a transient upstream outage
+    that should fail over. So when a success body carries an error envelope with
+    its own code, that code wins.
+    """
+    if not response.is_success:
+        return response.status_code, extract_error_message(response)
+
+    try:
+        body = response.json()
+    except ValueError:
+        return None, ""
+
+    if not isinstance(body, dict):
+        return None, ""
+
+    error = body.get("error")
+    if not isinstance(error, dict):
+        return None, ""
+
+    inner = error.get("code")
+    status = inner if isinstance(inner, int) and 400 <= inner < 600 else 502
+    return status, str(error.get("message", "upstream error"))

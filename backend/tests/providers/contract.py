@@ -167,6 +167,32 @@ class ProviderContractSuite(abc.ABC):
         with pytest.raises(ProviderResponseError):
             await self.complete(self.build())
 
+    @respx.mock
+    async def test_error_envelope_inside_a_200_is_not_treated_as_success(self):
+        # OpenRouter proxies other providers and reports an upstream 502 as
+        # HTTP 200 with an error body. Seen live on nemotron-3-ultra. The inner
+        # code must win, so the router fails over instead of recording a
+        # permanent malformed-response fault against the model.
+        respx.post(self.completions_url).respond(
+            200, json={"error": {"message": "Upstream error from Nvidia", "code": 502}}
+        )
+        with pytest.raises(ProviderUnavailableError):
+            await self.complete(self.build())
+
+    @respx.mock
+    async def test_error_envelope_inside_a_200_without_a_code_still_fails_over(self):
+        respx.post(self.completions_url).respond(200, json={"error": {"message": "upstream died"}})
+        with pytest.raises(ProviderUnavailableError):
+            await self.complete(self.build())
+
+    @respx.mock
+    async def test_rate_limit_reported_inside_a_200_maps_to_rate_limit(self):
+        respx.post(self.completions_url).respond(
+            200, json={"error": {"message": "rate limited upstream", "code": 429}}
+        )
+        with pytest.raises(ProviderRateLimitError):
+            await self.complete(self.build())
+
     # --- error mapping ------------------------------------------------------
 
     @respx.mock
