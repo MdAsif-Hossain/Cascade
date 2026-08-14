@@ -14,9 +14,11 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-# Minimum length below which an answer cannot be a useful explanation. Kept low
-# because a correct answer to "what is 2+2" is legitimately two characters.
-MIN_ANSWER_CHARS = 2
+# Only genuinely empty answers are rejected on length. An earlier version used a
+# two-character floor and rejected "4" — a complete, correct answer to "what is
+# 2+2". Any floor above 1 punishes the terse answers that cheap models are best
+# at, which is exactly the wrong direction for a system built on routing to them.
+MIN_ANSWER_CHARS = 1
 
 # Above this, a "concise" answer has clearly run away with itself. Generous, so
 # that a genuinely long derivation is not punished.

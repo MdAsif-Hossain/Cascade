@@ -9,11 +9,30 @@ ignore = ["ANN101", "ANN102"]
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["ANN"]
 
+# Depends()/Query() in argument defaults is FastAPI's documented dependency
+# injection idiom, not the mutable-default bug B008 is looking for.
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Body",
+    "fastapi.Header",
+]
+
 [tool.mypy]
 python_version = "3.11"
 files = ["app"]
 strict = true
 warn_unreachable = true
+
+# scikit-learn and joblib ship no usable type information. The backend imports
+# them only to load and call the persisted classifier; numpy is deliberately not
+# imported here at all (see routing/classifier.py) so its 3.12-only stubs never
+# have to be parsed under our 3.11 target.
+[[tool.mypy.overrides]]
+module = ["sklearn", "sklearn.*", "joblib", "joblib.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from app.core.errors import ProviderError
 from app.providers.base import Message
 from app.routing.router import Router
+from app.routing.tiers import Tier
 from app.verification import heuristics
 
 # Below this the answer is not trusted and the question escalates (CLAUDE.md §8).
@@ -31,7 +32,7 @@ JUDGE_MAX_TOKENS = 200
 
 # Judging is cheap work, so it runs on the cheapest band. Using a strong model to
 # grade a weak one would cost more than simply answering with the strong model.
-JUDGE_TIER = "T1"
+JUDGE_TIER: Tier = "T1"
 
 _JUDGE_SYSTEM = Message(
     role="system",

@@ -23,13 +23,37 @@ from __future__ import annotations
 
 import hashlib
 import json
-import math
 import pathlib
-import re
-from dataclasses import dataclass
+import sys
 
 import httpx
 import numpy as np
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "backend"))
+
+# Imported, never redefined: training and inference must compute identical
+# features or the persisted model silently becomes meaningless.
+from app.routing.features import (  # noqa: E402
+    FEATURE_NAMES as HANDCRAFTED_NAMES,
+)
+from app.routing.features import (  # noqa: E402
+    QUESTION_WORDS,
+    SUBJECTS,
+    Sample,
+    handcrafted_features,
+)
+
+__all__ = [
+    "EMBED_DIMENSIONS",
+    "EMBED_MODEL",
+    "HANDCRAFTED_NAMES",
+    "QUESTION_WORDS",
+    "SUBJECTS",
+    "EmbeddingClient",
+    "Sample",
+    "build_handcrafted_matrix",
+    "handcrafted_features",
+]
 
 EMBED_MODEL = "gemini-embedding-001"
 EMBED_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{EMBED_MODEL}:embedContent"
@@ -41,73 +65,6 @@ EMBED_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{EMBED_MOD
 EMBED_DIMENSIONS = 256
 
 CACHE_PATH = pathlib.Path(__file__).parent / "data" / "raw" / "embeddings.jsonl"
-
-SUBJECTS = ("math", "science", "history", "language", "general")
-QUESTION_WORDS = ("what", "why", "how", "which", "who", "when", "where")
-
-_MATH_OPERATORS = re.compile(r"[+\-*/=<>%^]|\b(?:times|divided|per cent|percent)\b")
-_NUMBER = re.compile(r"\d")
-
-
-HANDCRAFTED_NAMES: tuple[str, ...] = (
-    "char_count",
-    "word_count",
-    "mean_word_length",
-    "digit_density",
-    "number_count",
-    "math_operator_count",
-    "has_math_operator",
-    "sentence_count",
-    "comma_count",
-    "num_choices",
-    *(f"qword_{w}" for w in QUESTION_WORDS),
-    "qword_other",
-    *(f"subject_{s}" for s in SUBJECTS),
-)
-
-
-@dataclass(frozen=True, slots=True)
-class Sample:
-    """One labelled question, as the feature builder needs it."""
-
-    text: str
-    subject: str
-    num_choices: int
-
-
-def handcrafted_features(sample: Sample) -> list[float]:
-    """Surface statistics of a question.
-
-    Counts are log-scaled because raw length is heavy-tailed — a single
-    500-word word problem would otherwise dominate a linear model's view of every
-    other feature.
-    """
-    text = sample.text
-    words = text.split()
-    digits = len(_NUMBER.findall(text))
-    operators = len(_MATH_OPERATORS.findall(text.lower()))
-    lowered = text.strip().lower()
-
-    first_word = lowered.split()[0] if words else ""
-    qword_flags = [1.0 if first_word.startswith(w) else 0.0 for w in QUESTION_WORDS]
-    qword_flags.append(0.0 if any(qword_flags) else 1.0)
-
-    subject_flags = [1.0 if sample.subject == s else 0.0 for s in SUBJECTS]
-
-    return [
-        math.log1p(len(text)),
-        math.log1p(len(words)),
-        (sum(len(w) for w in words) / len(words)) if words else 0.0,
-        digits / len(text) if text else 0.0,
-        math.log1p(digits),
-        math.log1p(operators),
-        1.0 if operators else 0.0,
-        math.log1p(text.count(".") + text.count("?") + text.count("!")),
-        math.log1p(text.count(",")),
-        float(sample.num_choices),
-        *qword_flags,
-        *subject_flags,
-    ]
 
 
 class EmbeddingClient:
