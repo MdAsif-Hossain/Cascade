@@ -38,3 +38,11 @@ ignore_missing_imports = true
 testpaths = ["tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+
+# Makes `app` importable under bare `pytest`, which is what CI runs.
+# `python -m pytest` prepends the working directory to sys.path and bare `pytest`
+# does not, so the two are not interchangeable — CI failed on "No module named
+# 'app'" while the identical suite passed locally. Setting this explicitly means
+# both invocations behave the same and the suite no longer depends on which
+# directories happen to contain an __init__.py.
+pythonpath = ["."]
