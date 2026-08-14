@@ -100,6 +100,8 @@ Tier candidate ordering follows measured latency, not price.
 
 ## Architecture
 
+![Cascade architecture](docs/architecture.png)
+
 ```
 Next.js (Vercel)
       │  HTTPS
