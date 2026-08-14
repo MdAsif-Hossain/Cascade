@@ -12,7 +12,7 @@ Gemini does not fit this dialect and has its own adapter.
 from __future__ import annotations
 
 import time
-from typing import Any
+from typing import Any, ClassVar
 
 import httpx
 
@@ -92,8 +92,8 @@ def _extract_error_message(response: httpx.Response) -> str:
 class OpenAICompatProvider(Provider):
     """Adapter for providers exposing OpenAI-compatible chat completions."""
 
-    base_url: str
-    extra_headers: dict[str, str] = {}
+    base_url: ClassVar[str]
+    extra_headers: ClassVar[dict[str, str]] = {}
 
     def _headers(self) -> dict[str, str]:
         return {"Authorization": f"Bearer {self._api_key}", **self.extra_headers}
