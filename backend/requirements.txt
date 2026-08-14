@@ -1,0 +1,8 @@
+# Phase 0: CI/test tooling only. Runtime dependencies (fastapi, httpx,
+# sqlalchemy, scikit-learn, ...) are added incrementally as each phase
+# actually uses them — see CLAUDE.md section 4 for the full approved stack.
+
+pytest==8.3.3
+pytest-asyncio==0.24.0
+ruff==0.7.4
+mypy==1.13.0
