@@ -1,0 +1,44 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# --- Node / Next.js ---
+node_modules/
+.next/
+out/
+.vercel/
+
+# --- Env / secrets ---
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# --- Data / artifacts ---
+ml/data/raw/*
+!ml/data/raw/.gitkeep
+ml/data/labeled/*
+!ml/data/labeled/.gitkeep
+# backend/artifacts/classifier.joblib is intentionally tracked (kilobytes).
+# Never commit a .joblib file larger than 5 MB — check size by hand before staging.
+
+# --- Notebook outputs ---
+.ipynb_checkpoints/
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# --- Logs ---
+*.log
