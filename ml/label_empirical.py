@@ -61,8 +61,66 @@ SYSTEM = Message(
 MAX_TOKENS_MCQ = 256
 MAX_TOKENS_NUMERIC = 768
 
-CONCURRENCY = 4
-MAX_RATE_LIMIT_RETRIES = 6
+MAX_RATE_LIMIT_RETRIES = 8
+
+# Measured from live response headers on 2026-08-14. Groq meters *tokens* per
+# minute, not requests: llama-3.1-8b-instant allows 14,400 requests/day but only
+# 6,000 tokens/minute, so requests-per-second pacing hits the wall immediately.
+# The first pilot run used four concurrent workers and lost 9 of 60 questions to
+# exhausted rate-limit retries — the pacer below exists because of that.
+TOKENS_PER_MINUTE = {"groq": 6_000, "gemini": 60_000}
+DEFAULT_TOKENS_PER_MINUTE = 6_000
+CONCURRENCY = 2
+
+
+class TokenPacer:
+    """Keeps a rolling estimate of tokens spent and waits before exceeding the budget.
+
+    Reacting to 429s alone is not enough: by the time one arrives the quota is
+    already spent, and every in-flight request is about to fail too. Spending is
+    tracked as it happens and requests wait for headroom instead.
+    """
+
+    def __init__(self, tokens_per_minute: int) -> None:
+        self._budget = tokens_per_minute
+        self._spent: list[tuple[float, int]] = []
+        self._lock = asyncio.Lock()
+
+    def _prune(self, now: float) -> None:
+        self._spent = [(at, n) for at, n in self._spent if now - at < 60.0]
+
+    async def reserve(self, estimated_tokens: int) -> None:
+        """Block until ``estimated_tokens`` fit inside the trailing-minute budget."""
+        while True:
+            async with self._lock:
+                now = time.monotonic()
+                self._prune(now)
+                used = sum(n for _, n in self._spent)
+                if used + estimated_tokens <= self._budget or not self._spent:
+                    self._spent.append((now, estimated_tokens))
+                    return
+                oldest = min(at for at, _ in self._spent)
+                wait = max(0.1, 60.0 - (now - oldest))
+            await asyncio.sleep(wait)
+
+    async def record_actual(self, estimated: int, actual: int) -> None:
+        """Replace the estimate with the real cost once the provider reports it."""
+        async with self._lock:
+            for index in range(len(self._spent) - 1, -1, -1):
+                if self._spent[index][1] == estimated:
+                    self._spent[index] = (self._spent[index][0], actual)
+                    return
+
+
+def estimate_tokens(question: Question) -> int:
+    """Rough token cost of one attempt, used only for pacing.
+
+    Deliberately generous: over-estimating costs a little throughput, while
+    under-estimating costs a 429 and the retry storm that follows.
+    """
+    prompt = len(question.prompt()) // 3
+    completion = MAX_TOKENS_MCQ // 4 if question.is_multiple_choice else MAX_TOKENS_NUMERIC // 2
+    return prompt + completion
 
 
 @dataclass
@@ -119,7 +177,11 @@ class ResponseCache:
 
 
 async def ask(
-    provider: Provider, model: str, question: Question, cache: ResponseCache
+    provider: Provider,
+    model: str,
+    question: Question,
+    cache: ResponseCache,
+    pacer: TokenPacer,
 ) -> Attempt:
     """Ask one model one question, grading and caching the result.
 
@@ -133,14 +195,18 @@ async def ask(
 
     max_tokens = MAX_TOKENS_MCQ if question.is_multiple_choice else MAX_TOKENS_NUMERIC
     messages = [SYSTEM, Message(role="user", content=question.prompt())]
+    estimated = estimate_tokens(question)
 
     for attempt_number in range(1, MAX_RATE_LIMIT_RETRIES + 1):
+        await pacer.reserve(estimated)
         try:
             completion = await provider.complete(messages, model, max_tokens=max_tokens)
         except ProviderRateLimitError as exc:
             if attempt_number == MAX_RATE_LIMIT_RETRIES:
                 return Attempt(question.id, model, "", False, 0, 0, 0, error=str(exc))
-            wait = exc.retry_after or min(2.0 * attempt_number, 30.0)
+            # Back off well past a minute: the budget is per trailing minute, so
+            # a shorter wait simply re-enters the same exhausted window.
+            wait = exc.retry_after or min(15.0 * attempt_number, 90.0)
             await asyncio.sleep(wait)
             continue
         except ProviderError as exc:
@@ -148,6 +214,7 @@ async def ask(
             # would bake a transient outage into the labels permanently.
             return Attempt(question.id, model, "", False, 0, 0, 0, error=str(exc))
 
+        await pacer.record_actual(estimated, completion.total_tokens)
         result = Attempt(
             question_id=question.id,
             model=model,
@@ -170,8 +237,9 @@ async def run_stage(
     cache: ResponseCache,
     label: str,
 ) -> dict[str, Attempt]:
-    """Run one model across a set of questions with bounded concurrency."""
+    """Run one model across a set of questions, paced to the provider's token budget."""
     semaphore = asyncio.Semaphore(CONCURRENCY)
+    pacer = TokenPacer(TOKENS_PER_MINUTE.get(provider.name, DEFAULT_TOKENS_PER_MINUTE))
     results: dict[str, Attempt] = {}
     done = 0
     started = time.perf_counter()
@@ -179,7 +247,7 @@ async def run_stage(
     async def worker(question: Question) -> None:
         nonlocal done
         async with semaphore:
-            results[question.id] = await ask(provider, model, question, cache)
+            results[question.id] = await ask(provider, model, question, cache, pacer)
             done += 1
             if done % 25 == 0 or done == len(questions):
                 elapsed = time.perf_counter() - started

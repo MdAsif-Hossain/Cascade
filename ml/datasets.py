@@ -170,17 +170,23 @@ def _from_gsm8k(row: dict[str, Any], index: int) -> Question | None:
     )
 
 
-# Counts chosen to reach roughly 1,200 questions with maths meaningfully
-# represented. GSM8K is the only non-multiple-choice source and the only one
-# requiring multi-step arithmetic, so it is deliberately the largest slice —
-# without it the pool would be almost entirely science recall and the classifier
-# would have little hard signal to learn from.
+# Counts reach roughly 1,200 questions, weighted towards the harder sources.
+#
+# A 60-question pilot on 2026-08-14 measured how often the T1 model answers each
+# source correctly: ARC-Easy 100%, GSM8K 92%, SciQ 83%, ARC-Challenge 73%,
+# OpenBookQA 71%. An even split therefore produces a pool that is ~86% T1, which
+# leaves almost no T2/T3 examples to learn from. Shifting weight towards
+# ARC-Challenge and OpenBookQA buys harder questions without reaching outside
+# the five datasets the project specified.
+#
+# This changes the class balance, not the labels: each question's tier is still
+# whatever the models actually achieve on it.
 POOL_PLAN: tuple[tuple[str, str, str, str, int], ...] = (
-    ("allenai/ai2_arc", "ARC-Easy", "test", "arc-easy", 250),
-    ("allenai/ai2_arc", "ARC-Challenge", "test", "arc-challenge", 250),
+    ("allenai/ai2_arc", "ARC-Easy", "test", "arc-easy", 120),
+    ("allenai/ai2_arc", "ARC-Challenge", "test", "arc-challenge", 400),
     ("openai/gsm8k", "main", "test", "gsm8k", 300),
-    ("allenai/sciq", "default", "test", "sciq", 200),
-    ("allenai/openbookqa", "main", "test", "openbookqa", 200),
+    ("allenai/sciq", "default", "test", "sciq", 130),
+    ("allenai/openbookqa", "main", "test", "openbookqa", 300),
 )
 
 
