@@ -4,7 +4,11 @@ An AI study assistant that routes each question to the cheapest model likely to 
 
 Built to run entirely on free provider tiers — $0 inference, $0 hosting.
 
-**Status:** Phases 0–4 complete. Live URL pending deploy.
+Capstone project for the Ostad AI Engineering programme.
+
+**Live:** https://cascade-red-eight.vercel.app
+
+⚠️ The frontend is deployed; the API is not yet. Pages render, but asking a question will fail until the backend is live on Render and `NEXT_PUBLIC_API_BASE` is set. Until then the screenshots below — captured from a full local run — are the accurate picture of the working system.
 
 ---
 
