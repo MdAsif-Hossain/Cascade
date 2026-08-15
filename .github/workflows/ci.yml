@@ -2,6 +2,12 @@ name: CI
 
 on:
   push:
+    branches: ["**"]
+    # Tags point at historical commits. Pushing v0.1-proposal re-ran this
+    # workflow against a commit from before the pytest sys.path fix and failed,
+    # which says nothing about the current tree. Milestone tags are labels, not
+    # something to re-test.
+    tags-ignore: ["**"]
   pull_request:
 
 jobs:
