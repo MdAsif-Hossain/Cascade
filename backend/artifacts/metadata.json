@@ -1,0 +1,55 @@
+{
+  "trained_at": "2026-08-14T18:53:35.311646+00:00",
+  "model": "boosting",
+  "feature_set": "both",
+  "n_features": 278,
+  "embedding_model": "gemini-embedding-001",
+  "embedding_dimensions": 256,
+  "handcrafted_features": [
+    "log_char_count",
+    "log_word_count",
+    "mean_word_length",
+    "digit_density",
+    "log_digit_count",
+    "log_math_operator_count",
+    "has_math_operator",
+    "log_sentence_count",
+    "log_comma_count",
+    "qword_what",
+    "qword_why",
+    "qword_how",
+    "qword_which",
+    "qword_who",
+    "qword_when",
+    "qword_where",
+    "qword_other",
+    "subject_math",
+    "subject_science",
+    "subject_history",
+    "subject_language",
+    "subject_general"
+  ],
+  "tiers": [
+    "T1",
+    "T2",
+    "T3"
+  ],
+  "random_seed": 20260814,
+  "dataset_sizes": {
+    "total": 994,
+    "train": 695,
+    "val": 149,
+    "test": 150
+  },
+  "label_distribution": {
+    "T1": 838,
+    "T2": 142,
+    "T3": 14
+  },
+  "validation": {
+    "majority_baseline_accuracy": 0.8456,
+    "accuracy": 0.8188,
+    "macro_f1": 0.4227
+  },
+  "test": "not evaluated here \u2014 see ml/eval/run_eval.py, run once"
+}

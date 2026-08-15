@@ -1,8 +1,33 @@
-# Phase 0: CI/test tooling only. Runtime dependencies (fastapi, httpx,
-# sqlalchemy, scikit-learn, ...) are added incrementally as each phase
-# actually uses them — see CLAUDE.md section 4 for the full approved stack.
+# Runtime dependencies only — this file is what the Docker image installs, and
+# the free tier gives us 512 MB. Test and lint tooling lives in
+# requirements-dev.txt so it never ships to production.
+#
+# Every entry is from the approved stack in CLAUDE.md section 4.
 
-pytest==8.3.3
-pytest-asyncio==0.24.0
-ruff==0.7.4
-mypy==1.13.0
+# --- Web ---
+fastapi==0.141.1
+uvicorn==0.52.3
+pydantic==2.13.4
+pydantic-settings==2.15.0
+
+# --- Provider calls (async only; never `requests`) ---
+httpx==0.28.1
+tenacity==9.1.4
+
+# --- Persistence ---
+SQLAlchemy==2.0.52
+alembic==1.19.1
+# SQLAlchemy ships no database driver of its own. SQLite is built into Python, so
+# local development works without this — but production points at Supabase
+# Postgres, and without a driver the app raises ModuleNotFoundError on the first
+# connection. The -binary wheel avoids needing libpq and a compiler in the image.
+psycopg2-binary==2.9.10
+
+# --- Classifier ---
+# scikit-learn is the single largest install here. It is present only to load and
+# call the persisted pipeline; nothing is trained in the backend.
+scikit-learn==1.9.0
+joblib==1.5.3
+
+# --- Logging ---
+structlog==26.1.0

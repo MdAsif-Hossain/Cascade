@@ -56,10 +56,10 @@ Next.js (Vercel)
       ▼
 FastAPI gateway (Render, Docker)
       │
-      ├─ Embedder ──────────► hosted embedding API
+      ├─ Embedder ──────────► Gemini embedding API (gemini-embedding-001)
       ├─ Difficulty classifier (sklearn, local .joblib)
       ├─ Router ────────────► tier selection + provider choice
-      ├─ Provider adapters ─► Groq │ Gemini │ Cerebras │ OpenRouter
+      ├─ Provider adapters ─► Groq │ Gemini │ OpenRouter
       ├─ Verifier ──────────► LLM-as-judge (different provider than answerer)
       ├─ Escalation loop
       └─ Catalog poller (background) ─► provider model lists
@@ -130,7 +130,7 @@ cascade/
 │   │   ├── main.py
 │   │   ├── api/v1/routes/      # ask.py, metrics.py, health.py, feedback.py
 │   │   ├── core/               # config.py, logging.py, errors.py, cache.py
-│   │   ├── providers/          # base.py, groq.py, gemini.py, cerebras.py, openrouter.py
+│   │   ├── providers/          # base.py, groq.py, gemini.py, openrouter.py
 │   │   ├── routing/            # classifier.py, router.py, tiers.py
 │   │   ├── verification/       # verifier.py, heuristics.py
 │   │   ├── catalog/            # poller.py, drift.py
@@ -349,18 +349,18 @@ Version control is graded and cannot be fixed retroactively. Follow these exactl
 Complete each phase before starting the next. Do not work ahead.
 
 ### Phase 0 — Foundation
-- [ ] Repo, structure, `.gitignore`, `.env.example`, this file committed
-- [ ] GitHub Actions CI with one passing test
-- [ ] Verify provider access from Bangladesh: obtain keys for Groq, Google AI Studio, Cerebras, OpenRouter and make one successful call to each. **If fewer than three work, stop and report back before continuing.**
-- [ ] `docs/proposal.md` (1–2 pages)
+- [x] Repo, structure, `.gitignore`, `.env.example`, this file committed
+- [x] GitHub Actions CI with one passing test
+- [x] Verify provider access from Bangladesh — **3/4 pass.** Groq, Gemini, OpenRouter work; Cerebras returns HTTP 402 on every model and is dropped. See `docs/adr/0001-provider-selection.md`.
+- [x] `docs/proposal.md` (1–2 pages)
 
 ### Phase 1 — Provider layer
-- [ ] `providers/base.py` contract
-- [ ] **Contract test suite, written first**
-- [ ] Four adapters, all passing the suite
-- [ ] Retry, backoff, circuit breaker
-- [ ] Tier definitions with published pricing table
-- [ ] Milestone: one question routed to a hardcoded tier returns an answer
+- [x] `providers/base.py` contract
+- [x] **Contract test suite, written first** (28 shared assertions per adapter)
+- [x] Three adapters, all passing the suite
+- [x] Retry, backoff, circuit breaker
+- [x] Tier definitions with published pricing table — every model verified callable 2026-08-14; see `docs/adr/0002-catalog-listing-is-not-callability.md`
+- [x] Milestone: one question routed to a hardcoded tier returns an answer (T1 via Groq, 684 ms; failover to Gemini verified live)
 
 ### Phase 2 — Intelligence (the core)
 - [ ] `label_empirical.py` — generate labels, cache all responses

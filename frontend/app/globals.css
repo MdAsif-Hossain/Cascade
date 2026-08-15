@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-paper text-ink font-body antialiased;
+  }
+
+  /* Focus must be visible for keyboard users; the default outline is removed by
+     Tailwind's reset, so it is put back deliberately rather than left to chance. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-t1 ring-offset-2 ring-offset-paper;
+  }
+}
+
+@layer utilities {
+  /* Respect a reader who has asked the OS for less motion. Applies to every
+     animation on the site, so no component has to remember. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

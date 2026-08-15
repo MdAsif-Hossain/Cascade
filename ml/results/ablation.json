@@ -1,0 +1,178 @@
+{
+  "majority_baseline_accuracy": 0.8456,
+  "split_sizes": {
+    "train": 695,
+    "val": 149,
+    "test": 150
+  },
+  "results": [
+    {
+      "model": "logistic",
+      "feature_set": "handcrafted",
+      "n_features": 22,
+      "accuracy": 0.396,
+      "macro_f1": 0.2295,
+      "accuracy_over_baseline": -0.4497,
+      "per_class": {
+        "T1": {
+          "precision": 0.8462,
+          "recall": 0.4365,
+          "f1": 0.5759,
+          "support": 126
+        },
+        "T2": {
+          "precision": 0.08,
+          "recall": 0.1905,
+          "f1": 0.1127,
+          "support": 21
+        },
+        "T3": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 2
+        }
+      }
+    },
+    {
+      "model": "logistic",
+      "feature_set": "embedding",
+      "n_features": 256,
+      "accuracy": 0.6376,
+      "macro_f1": 0.3019,
+      "accuracy_over_baseline": -0.2081,
+      "per_class": {
+        "T1": {
+          "precision": 0.8349,
+          "recall": 0.7222,
+          "f1": 0.7745,
+          "support": 126
+        },
+        "T2": {
+          "precision": 0.1,
+          "recall": 0.1905,
+          "f1": 0.1311,
+          "support": 21
+        },
+        "T3": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 2
+        }
+      }
+    },
+    {
+      "model": "logistic",
+      "feature_set": "both",
+      "n_features": 278,
+      "accuracy": 0.6711,
+      "macro_f1": 0.3039,
+      "accuracy_over_baseline": -0.1745,
+      "per_class": {
+        "T1": {
+          "precision": 0.8291,
+          "recall": 0.7698,
+          "f1": 0.7984,
+          "support": 126
+        },
+        "T2": {
+          "precision": 0.0938,
+          "recall": 0.1429,
+          "f1": 0.1132,
+          "support": 21
+        },
+        "T3": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 2
+        }
+      }
+    },
+    {
+      "model": "boosting",
+      "feature_set": "handcrafted",
+      "n_features": 22,
+      "accuracy": 0.8456,
+      "macro_f1": 0.3342,
+      "accuracy_over_baseline": 0.0,
+      "per_class": {
+        "T1": {
+          "precision": 0.8562,
+          "recall": 0.9921,
+          "f1": 0.9191,
+          "support": 126
+        },
+        "T2": {
+          "precision": 0.3333,
+          "recall": 0.0476,
+          "f1": 0.0833,
+          "support": 21
+        },
+        "T3": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 2
+        }
+      }
+    },
+    {
+      "model": "boosting",
+      "feature_set": "embedding",
+      "n_features": 256,
+      "accuracy": 0.8054,
+      "macro_f1": 0.3935,
+      "accuracy_over_baseline": -0.0403,
+      "per_class": {
+        "T1": {
+          "precision": 0.85,
+          "recall": 0.9444,
+          "f1": 0.8947,
+          "support": 126
+        },
+        "T2": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 21
+        },
+        "T3": {
+          "precision": 0.2,
+          "recall": 0.5,
+          "f1": 0.2857,
+          "support": 2
+        }
+      }
+    },
+    {
+      "model": "boosting",
+      "feature_set": "both",
+      "n_features": 278,
+      "accuracy": 0.8188,
+      "macro_f1": 0.4227,
+      "accuracy_over_baseline": -0.0268,
+      "per_class": {
+        "T1": {
+          "precision": 0.8571,
+          "recall": 0.9524,
+          "f1": 0.9023,
+          "support": 126
+        },
+        "T2": {
+          "precision": 0.25,
+          "recall": 0.0476,
+          "f1": 0.08,
+          "support": 21
+        },
+        "T3": {
+          "precision": 0.2,
+          "recall": 0.5,
+          "f1": 0.2857,
+          "support": 2
+        }
+      }
+    }
+  ]
+}
