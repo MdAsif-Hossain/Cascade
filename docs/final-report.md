@@ -74,7 +74,7 @@ actual  T1   123    2    1
 
 So the classifier does not work. I want to be direct about that because it was supposed to be the most technically interesting part of the project, and dressing it up would be worse than the failure itself.
 
-One qualifier, which I offer as an observation rather than evidence. The model is not degenerate — it does respond to the question. Asking the deployed service "What is 2+2?" gives T1 at 0.95 confidence, and "Prove that the square root of 2 is irrational" gives T2 at 0.90. So it has learned something. It just hasn't learned enough of it, often enough, to beat a constant.
+One qualifier, which I offer as an observation rather than evidence. The model is not degenerate — it does respond to the question. Asking the deployed service "What is photosynthesis?" gives T1 at 0.99 confidence, and "Prove that the square root of 2 is irrational" gives T2 at 0.90. So it has learned something. It just hasn't learned enough of it, often enough, to beat a constant.
 
 **A note on how many times I used the test split.** The plan was to touch it once, at the end. I touched it twice. The first evaluation ran, and afterwards I found a feature that leaked (§3.3), removed it, retrained, and evaluated again. Both results are in the repository — `test_results_v1_with_leak.json` from the first run (accuracy 0.8400) and `test_results.json` from the second. Nothing was tuned between them; the only change was deleting a broken feature. The gap between the two runs is one question out of 150 and the conclusion is the same either way, but two evaluations is a weaker claim than one and I would rather say so than quietly publish the better-looking number.
 
@@ -178,6 +178,7 @@ The conclusion, written up as ADR-0002, is that being listed and being callable 
 | Lint / types | `ruff` and `mypy --strict` clean |
 | Adapters | 3, all against one 28-assertion shared contract suite |
 | Classifier artifact | 565 KB |
+| Commits | 53 |
 | Groq latency | 126 ms |
 | Gemini latency | 908 ms |
 | OpenRouter (free) latency | 27.5 s |
@@ -191,7 +192,23 @@ Three things I learned the hard way.
 
 **A degraded dependency is invisible unless you make it report itself.** The free embedding tier allows about 1,000 requests a day and mine ran out at 993. The classifier needs an embedding to make a prediction, so every request after that fell back to a fixed tier. That is correct behaviour and it kept the service answering questions. But from outside it looked exactly like a working classifier that had decided every question was T2, and I spent close to an hour chasing the wrong cause. The only thing that eventually gave it away was the `prediction_source: "no_embedding"` field in the API response. I'd added that field early on without much thought about why; it turned out to be the most useful line of code in the project.
 
-## 7. Limitations
+## 7. Deployment
+
+The system runs on three free services: the frontend on Vercel, the API on Render as a Docker container, and Postgres on Supabase. Total cost is zero, which was a hard constraint from the start rather than a nice-to-have.
+
+Getting there produced four problems worth recording, because none of them were about the code being wrong.
+
+**CI failed on a commit that was fine.** The workflow triggered on `push` with no ref filter, so pushing the `v0.1-proposal` tag re-ran the whole pipeline against a commit from before a fix, and reported a failure that said nothing about the current tree. Tags label history; they are not something to re-test.
+
+**SQLAlchemy ships no database driver.** Everything worked locally on SQLite, which is built into Python. Pointing `DATABASE_URL` at Supabase would have raised `ModuleNotFoundError: No module named 'psycopg2'` on the first connection. I caught this reading the requirements file while writing the deployment guide, not from a failure — the local test suite would never have found it, because it never touches Postgres.
+
+**Supabase's direct connection host is IPv6-only** and Render's free tier has no IPv6. The failure mode is a connection timeout with nothing pointing at the cause. The session pooler hostname is IPv4 and works.
+
+**`NEXT_PUBLIC_*` variables are compiled in at build time.** Setting `NEXT_PUBLIC_API_BASE` on Vercel changes nothing until a new build runs, and marking it "Sensitive" stops it being inlined at all — which is coherent, since sensitive means "never expose" and `NEXT_PUBLIC_` means "expose this". The two settings contradict each other and the variable is silently dropped. The site kept serving a bundle with `127.0.0.1:8000` compiled into it, and the browser blocked the request as mixed content before it ever left the page, so nothing appeared in the network log to debug from.
+
+The common thread is that all four were configuration, invisible to the test suite, and produced errors that named something other than the actual problem. That is most of what deployment turned out to be.
+
+## 8. Limitations
 
 1. **The classifier doesn't beat a majority-class baseline.** It scores 0.8333 against 0.8400 and finds almost no T2 or T3 questions. In practice its routing decisions amount to "always T1".
 2. **The 97.6% cost reduction figure follows from that failure rather than from good routing.** Because nearly everything is predicted T1, the routed cost is nearly always T1 cost. The arithmetic is right and no money was spent either way, but the number should be read as "what always-T1 routing costs", next to the 14% under-prediction rate the verifier has to absorb.
@@ -204,7 +221,7 @@ Three things I learned the hard way.
 9. **Quality retention against an always-T3 baseline wasn't measured directly.** What I report is how often the predicted tier was strong enough (86.0%), which is a proxy. It doesn't measure whether the answer that came back was actually good.
 10. **Both services sleep.** The system is deployed and working end to end — frontend on Vercel, API on Render, database on Supabase — and the screenshots in `docs/screenshots/` are from the live site. But Render's free tier spins the container down after 15 minutes of inactivity, so the first request after a quiet period takes around 50 seconds while it wakes. A cron ping every 10 minutes keeps it warm. Supabase also pauses free projects after 7 days of no traffic, which would need a manual unpause.
 
-## 8. Conclusion
+## 9. Conclusion
 
 The cost argument survived. The learnability argument didn't.
 
@@ -213,3 +230,5 @@ The cost argument survived. The learnability argument didn't.
 What makes that survivable is the verifier, and I didn't expect to be writing that sentence. The 14% of questions routed too cheaply get caught by a second model from a different provider and escalated. Cost reduction without that check would just be quality reduction with better marketing. With it, the same routing behaviour is safe to ship. The component I had mentally filed as plumbing around the interesting part turned out to be the part holding the system up.
 
 If I picked this up again I wouldn't start by reaching for a better model. I'd start by asking a smaller question. "Which of three tiers does this need" demands more than the router ever uses. "Will the cheap model get this right" is one binary decision, with five times the minority data behind it, and it's the decision the system is actually making every time somebody types a question into the box.
+
+The system is live at https://cascade-red-eight.vercel.app. Ask it something and the trace under the answer will tell you which model replied, how long it took, and what the checker made of it — including, if the first attempt wasn't good enough, the step up to a stronger one.
