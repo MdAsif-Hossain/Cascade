@@ -7,8 +7,9 @@ Built to run entirely on free provider tiers — $0 inference, $0 hosting.
 Capstone project for the Ostad AI Engineering programme.
 
 **Live:** https://cascade-red-eight.vercel.app
+**API:** https://cascade-api-5w68.onrender.com ([docs](https://cascade-api-5w68.onrender.com/docs))
 
-⚠️ The frontend is deployed; the API is not yet. Pages render, but asking a question will fail until the backend is live on Render and `NEXT_PUBLIC_API_BASE` is set. Until then the screenshots below — captured from a full local run — are the accurate picture of the working system.
+Both are on free tiers, so the first request after a quiet spell can take up to 50 seconds while the backend wakes.
 
 ---
 
@@ -114,7 +115,7 @@ The routing trace under an answer — the element the interface is built around.
 |---|---|
 | ![History](docs/screenshots/history.png) | ![Metrics](docs/screenshots/metrics.png) |
 
-Captured from `localhost`; a public URL is pending deployment.
+Captured from the live site.
 
 ## Architecture
 
