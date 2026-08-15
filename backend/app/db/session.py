@@ -29,10 +29,23 @@ def _connect_args(url: str) -> dict[str, object]:
     return {}
 
 
+def normalise_url(url: str) -> str:
+    """Accept the ``postgres://`` scheme some hosts still hand out.
+
+    SQLAlchemy 2.0 removed support for that spelling and raises an obscure
+    "Can't load plugin" error. Rewriting it here means a connection string
+    pasted straight from a dashboard works instead of failing at startup with a
+    message that does not name the problem.
+    """
+    if url.startswith("postgres://"):
+        return url.replace("postgres://", "postgresql://", 1)
+    return url
+
+
 def get_engine() -> Engine:
     global _engine
     if _engine is None:
-        url = get_settings().database_url
+        url = normalise_url(get_settings().database_url)
         _engine = create_engine(url, connect_args=_connect_args(url), pool_pre_ping=True)
     return _engine
 

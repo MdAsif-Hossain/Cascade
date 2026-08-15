@@ -17,6 +17,11 @@ tenacity==9.1.4
 # --- Persistence ---
 SQLAlchemy==2.0.52
 alembic==1.19.1
+# SQLAlchemy ships no database driver of its own. SQLite is built into Python, so
+# local development works without this — but production points at Supabase
+# Postgres, and without a driver the app raises ModuleNotFoundError on the first
+# connection. The -binary wheel avoids needing libpq and a compiler in the image.
+psycopg2-binary==2.9.10
 
 # --- Classifier ---
 # scikit-learn is the single largest install here. It is present only to load and

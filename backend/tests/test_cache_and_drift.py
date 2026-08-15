@@ -204,3 +204,30 @@ class TestPoller:
         await poller.poll_once()
         assert poller.health["stub"].reachable is True
         assert poller.health["stub"].consecutive_failures == 0
+
+
+class TestDatabaseUrl:
+    """Connection-string handling, so a pasted dashboard URL does not fail at startup."""
+
+    def test_the_legacy_postgres_scheme_is_rewritten(self):
+        from app.db.session import normalise_url
+
+        assert normalise_url("postgres://u:p@host:5432/db") == "postgresql://u:p@host:5432/db"
+
+    def test_a_correct_postgres_url_is_untouched(self):
+        from app.db.session import normalise_url
+
+        url = "postgresql://u:p@host:5432/db"
+        assert normalise_url(url) == url
+
+    def test_sqlite_urls_are_untouched(self):
+        from app.db.session import normalise_url
+
+        assert normalise_url("sqlite:///./cascade.db") == "sqlite:///./cascade.db"
+
+    def test_only_the_scheme_is_replaced(self):
+        """A password containing the word 'postgres://' must not be mangled."""
+        from app.db.session import normalise_url
+
+        url = "postgres://user:postgres://weird@host/db"
+        assert normalise_url(url).count("postgresql://") == 1
