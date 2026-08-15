@@ -46,3 +46,7 @@ Thumbs.db
 # Local SQLite database created on first run
 *.db
 *.sqlite3
+
+# Local working files, not part of the published project
+CLAUDE.md
+docs/*.docx
