@@ -1,7 +1,11 @@
 # Cascade — Final Report
 
 **Md. Asif Hossain**
+Capstone project, Ostad AI Engineering
 15 August 2026
+
+**Repository:** https://github.com/MdAsif-Hossain/Cascade
+**Frontend:** https://cascade-red-eight.vercel.app
 
 ---
 
@@ -197,7 +201,7 @@ Three things I learned the hard way.
 7. **The verifier's threshold of 0.7 and cap of 2 escalations are untuned.** They came from the specification. Tuning them properly would need a labelled set of good and bad *answers*, which I don't have — my labels record whether a model was correct, not whether the judge agreed.
 8. **The judge is a cheap model and is sometimes wrong.** Its scores are a filter, not ground truth.
 9. **Quality retention against an always-T3 baseline wasn't measured directly.** What I report is how often the predicted tier was strong enough (86.0%), which is a proxy. It doesn't measure whether the answer that came back was actually good.
-10. **Not deployed yet.** The Render and Vercel configuration is written and the whole stack has been verified running locally — the screenshots in `docs/screenshots/` are from `localhost` — but there's no public URL as of writing.
+10. **Only half deployed.** The frontend is live at https://cascade-red-eight.vercel.app, but the API is not — the deployed bundle still points at `127.0.0.1:8000` because `NEXT_PUBLIC_API_BASE` has nothing to point at yet. The pages render and the layout is real, but no question can be answered through the public URL. Everything in this report was measured on a full local run, and the screenshots in `docs/screenshots/` are from `localhost`. Finishing the deployment is the one outstanding task: create the Supabase database, deploy the backend to Render with the three provider keys, then set `NEXT_PUBLIC_API_BASE` on Vercel and redeploy.
 
 ## 8. Conclusion
 
