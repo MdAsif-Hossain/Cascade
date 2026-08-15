@@ -33,7 +33,12 @@ FEATURE_NAMES: tuple[str, ...] = (
     "has_math_operator",
     "log_sentence_count",
     "log_comma_count",
-    "num_choices",
+    # `num_choices` was here and has been removed. It is a property of the
+    # benchmark, not of a question: 76% of training rows carried 4 options while
+    # a student's question always has 0. The model learned to read it, so every
+    # real question arrived looking like the free-form GSM8K subset and routed to
+    # T2 regardless of content. A feature that cannot be computed the same way at
+    # training and inference is worse than no feature at all.
     *(f"qword_{w}" for w in QUESTION_WORDS),
     "qword_other",
     *(f"subject_{s}" for s in SUBJECTS),
@@ -42,7 +47,11 @@ FEATURE_NAMES: tuple[str, ...] = (
 
 @dataclass(frozen=True, slots=True)
 class Sample:
-    """A question in the minimal form feature extraction needs."""
+    """A question in the minimal form feature extraction needs.
+
+    ``num_choices`` is retained on the sample because the labelling pipeline
+    knows it, but it is deliberately **not** a feature — see FEATURE_NAMES.
+    """
 
     text: str
     subject: str = "general"
@@ -77,7 +86,6 @@ def handcrafted_features(sample: Sample) -> list[float]:
         1.0 if operators else 0.0,
         math.log1p(text.count(".") + text.count("?") + text.count("!")),
         math.log1p(text.count(",")),
-        float(sample.num_choices),
         *qword_flags,
         *subject_flags,
     ]
