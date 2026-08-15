@@ -27,25 +27,27 @@ All figures measured, not estimated. Reproduce with `ml/eval/run_eval.py`.
 
 ### The honest headline
 
-**The difficulty classifier did not beat the majority-class baseline.** On the held-out test split it scored **84.00% accuracy against a baseline of 84.00%** — a difference of exactly zero. It learned to predict T1 almost always, which is what predicting the majority class does.
+**The difficulty classifier did not beat the majority-class baseline.** On the held-out test split it scored **83.33% accuracy against a baseline of 84.00%** — marginally *worse* than always guessing the most common tier.
 
 | Metric | Value |
 |---|---|
-| Test accuracy | 0.840 |
-| Majority-class baseline | 0.840 |
-| Improvement over baseline | **+0.000** |
-| Macro-F1 | 0.358 |
+| Test accuracy | 0.8333 |
+| Majority-class baseline | 0.8400 |
+| Improvement over baseline | **−0.0067** |
+| Macro-F1 | 0.3550 |
 | Test split size | 150 questions |
 
 Per class:
 
 | Tier | Precision | Recall | F1 | Support |
 |---|---:|---:|---:|---:|
-| T1 | 0.86 | 0.98 | 0.92 | 126 |
-| T2 | 0.67 | 0.09 | 0.16 | 22 |
+| T1 | 0.85 | 0.98 | 0.91 | 126 |
+| T2 | 0.50 | 0.09 | 0.15 | 22 |
 | T3 | 0.00 | 0.00 | 0.00 | 2 |
 
-It catches 2 of 22 T2 questions and 0 of 2 T3 questions. See `docs/final-report.md` for why, and what that means for the design.
+It catches 2 of 22 T2 questions and 0 of 2 T3 questions.
+
+It is not degenerate, though — it does discriminate. Live, it routes "What is 2+2?" to T1 at 0.95 confidence and "Prove that the square root of 2 is irrational" to T2 at 0.90. Those are anecdotes; the table above is the measurement. See [`docs/final-report.md`](docs/final-report.md) for why it fails and what that means for the design.
 
 ### Ablation — the study that did work
 
@@ -53,14 +55,14 @@ Validation split. This is the artifact that answers whether each feature family 
 
 | Model | Features | Dims | Accuracy | Macro-F1 |
 |---|---|---:|---:|---:|
-| logistic | handcrafted | 23 | 0.389 | 0.227 |
+| logistic | handcrafted | 22 | 0.396 | 0.230 |
 | logistic | embedding | 256 | 0.638 | 0.302 |
-| logistic | both | 279 | 0.671 | 0.304 |
-| boosting | handcrafted | 23 | 0.832 | 0.329 |
+| logistic | both | 278 | 0.671 | 0.304 |
+| boosting | handcrafted | 22 | 0.846 | 0.334 |
 | boosting | embedding | 256 | 0.805 | 0.393 |
-| **boosting** | **both** | **279** | **0.812** | **0.420** |
+| **boosting** | **both** | **278** | **0.819** | **0.423** |
 
-Macro-F1 rises monotonically — handcrafted 0.329, embeddings 0.393, both 0.420 — so both families carry signal and the combination is additive. Gradient boosting beats logistic regression on every feature set. No configuration beats the baseline on raw accuracy.
+Macro-F1 rises monotonically — handcrafted 0.334, embeddings 0.393, both 0.423 — so both families carry signal and the combination is additive. Gradient boosting beats logistic regression on every feature set. No configuration beats the baseline on accuracy; boosting on handcrafted features alone ties it exactly, which is what a model that has learned to always say T1 looks like.
 
 ### Empirical labels
 
@@ -86,7 +88,7 @@ Macro-F1 rises monotonically — handcrafted 0.329, embeddings 0.393, both 0.420
 
 ### Calibration
 
-Expected calibration error **0.1185** on validation. The model is overconfident in its 0.7–0.8 band (predicted 0.747, actual 0.375). Confidence is therefore *not* used as a routing input.
+Expected calibration error **0.1258** on validation. The model is overconfident where it matters most: in the 0.8–1.0 band, which holds 136 of 149 validation questions, it claims 0.946 and is right 0.824 of the time. Confidence is therefore *not* used as a routing input.
 
 ### Measured provider latency
 
@@ -97,6 +99,18 @@ Expected calibration error **0.1185** on validation. The model is overconfident 
 | OpenRouter | `openai/gpt-oss-20b:free` | 27.5 s |
 
 Tier candidate ordering follows measured latency, not price.
+
+## Screenshots
+
+The routing trace under an answer — the element the interface is built around. An escalation is drawn as a visible step upward, not a footnote.
+
+![Answer with routing trace](docs/screenshots/ask-answered.png)
+
+| History | Metrics |
+|---|---|
+| ![History](docs/screenshots/history.png) | ![Metrics](docs/screenshots/metrics.png) |
+
+Captured from `localhost`; a public URL is pending deployment.
 
 ## Architecture
 

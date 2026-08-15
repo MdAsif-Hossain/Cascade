@@ -41,23 +41,25 @@ This was visible early. A 60-question pilot measured T1 accuracy per source (ARC
 
 ### What was measured
 
-The test split was touched exactly once, after all model selection had completed on validation.
-
 | Metric | Value |
 |---|---|
-| Accuracy | 0.8400 |
+| Accuracy | 0.8333 |
 | **Majority-class baseline** | **0.8400** |
-| **Improvement** | **+0.0000** |
-| Macro-F1 | 0.3584 |
+| **Improvement** | **−0.0067** |
+| Macro-F1 | 0.3550 |
 | Test size | 150 |
 
 | Tier | Precision | Recall | F1 | Support |
 |---|---:|---:|---:|---:|
-| T1 | 0.86 | 0.98 | 0.92 | 126 |
-| T2 | 0.67 | 0.09 | 0.16 | 22 |
+| T1 | 0.85 | 0.98 | 0.91 | 126 |
+| T2 | 0.50 | 0.09 | 0.15 | 22 |
 | T3 | 0.00 | 0.00 | 0.00 | 2 |
 
-The classifier predicts T1 for 98% of T1 questions and also for most T2 questions. It identifies 2 of 22 T2 questions and none of the 2 T3 questions. Its accuracy is identical to always guessing T1, to four decimal places.
+The classifier predicts T1 for 98% of T1 questions and also for most T2 questions. It identifies 2 of 22 T2 questions and none of the 2 T3 questions. Its accuracy is marginally below always guessing T1.
+
+> **Disclosure — the test split was evaluated twice.** The specification requires it to be touched once. It was evaluated once, then a train/inference feature leak was found (§3.3), the feature was removed, the model retrained, and the split evaluated a second time. Both results are recorded: `ml/results/test_results_v1_with_leak.json` (accuracy 0.8400, macro-F1 0.3584) and `ml/results/test_results.json` (the numbers above). The second run is reported as the headline because the first model contained a feature that cannot be computed at inference. No hyperparameter was tuned between the two runs — the only change was deleting the leaking feature. Two evaluations is still a weaker guarantee than one, and it is stated here rather than hidden.
+
+The difference between the two is one question out of 150. The conclusion is unchanged either way: the classifier does not beat the baseline.
 
 **This does not support the claim that question difficulty is predictable from question text at this data scale.** The proposal asserted that deciding which questions need an expensive model is "a learnable problem". On this evidence, with these features and this much data, it is not learned.
 
@@ -67,30 +69,44 @@ The ablation is the one classifier artifact that produced a clear, positive find
 
 | Model | Features | Dims | Accuracy | Macro-F1 |
 |---|---|---:|---:|---:|
-| logistic | handcrafted | 23 | 0.389 | 0.227 |
+| logistic | handcrafted | 22 | 0.396 | 0.230 |
 | logistic | embedding | 256 | 0.638 | 0.302 |
-| logistic | both | 279 | 0.671 | 0.304 |
-| boosting | handcrafted | 23 | 0.832 | 0.329 |
+| logistic | both | 278 | 0.671 | 0.304 |
+| boosting | handcrafted | 22 | 0.846 | 0.334 |
 | boosting | embedding | 256 | 0.805 | 0.393 |
-| **boosting** | **both** | **279** | **0.812** | **0.420** |
+| **boosting** | **both** | **278** | **0.819** | **0.423** |
 
 Three things are legible here:
 
-1. **Both feature families carry signal, and they are additive.** Macro-F1 rises monotonically: handcrafted 0.329 → embeddings 0.393 → both 0.420. Neither family is decoration; the embedding API call on the hot path is justified by a measurable gain.
-2. **Gradient boosting beats logistic regression on every feature set**, decisively. Logistic regression with balanced class weights over-predicts the minority classes and collapses to 0.389 accuracy on handcrafted features. This is why both estimators are reported rather than only the first.
-3. **No configuration beats the baseline on accuracy.** The gain is entirely in macro-F1 — the model is slightly better at *not ignoring* minority classes, while being no better overall.
+1. **Both feature families carry signal, and they are additive.** Macro-F1 rises monotonically: handcrafted 0.334 → embeddings 0.393 → both 0.423. Neither family is decoration; the embedding API call on the hot path is justified by a measurable gain.
+2. **Gradient boosting beats logistic regression on every feature set**, decisively. Logistic regression with balanced class weights over-predicts the minority classes and collapses to 0.396 accuracy on handcrafted features. This is why both estimators are reported rather than only the first.
+3. **No configuration beats the baseline on accuracy.** Boosting on handcrafted features alone *equals* it exactly (0.846) — the signature of a model that has learned to always answer T1. The gain from adding embeddings shows up only in macro-F1, where the model becomes slightly better at not ignoring the minority classes while getting no better overall.
 
 ### Calibration
 
-Expected calibration error **0.1185** on validation.
+Expected calibration error **0.1258** on validation.
 
 | Confidence | n | Mean confidence | Observed accuracy | Gap |
 |---|---:|---:|---:|---:|
-| 0.6–0.7 | 7 | 0.648 | 0.714 | +0.066 |
-| 0.7–0.8 | 8 | 0.747 | 0.375 | −0.372 |
-| 0.8–1.0 | 134 | 0.949 | 0.843 | −0.106 |
+| 0.5–0.6 | 1 | 0.561 | 1.000 | +0.439 |
+| 0.6–0.7 | 4 | 0.674 | 0.500 | −0.174 |
+| 0.7–0.8 | 8 | 0.754 | 0.875 | +0.121 |
+| 0.8–1.0 | 136 | 0.946 | 0.824 | −0.122 |
 
-The model is badly overconfident in the 0.7–0.8 band — it claims 75% and is right 38% of the time. Confidence is therefore **not** used as a routing input anywhere in the system. Had it been, that band would have driven systematically wrong decisions while looking trustworthy.
+The model is overconfident where it matters: 136 of 149 validation questions land in the top band, where it claims 0.946 and is right 0.824 of the time. Confidence is therefore **not** used as a routing input anywhere in the system. Had it been, that band would have driven systematically over-trusted decisions across the overwhelming majority of traffic.
+
+### 3.3 A feature that leaked
+
+An earlier version of the model included `num_choices` — the number of answer options a question offers.
+
+That is a property of the benchmark, not of a question. 76% of training rows carried four options, because they came from multiple-choice datasets. A student typing into the box always supplies zero. The model learned to read a feature whose value at inference is a constant that appeared in only 24% of training data.
+
+It was removed and the model retrained. Two things are worth recording:
+
+- **The measured effect was small** — test accuracy moved from 0.8400 to 0.8333, one question in 150. The leak was not what made the classifier weak.
+- **It was found by accident, not by testing.** It surfaced while capturing screenshots, when every question appeared to route to T2. That turned out to have a different cause (§6, embedding quota exhaustion putting the classifier into fallback), and the leak was noticed only while investigating.
+
+`app/routing/features.py` is now the single implementation shared by training and inference, and `tests/test_features.py` asserts that a question's feature vector does not change when answer options are attached. A feature that cannot be computed identically in both places is worse than no feature at all.
 
 ### Why it failed
 
@@ -145,6 +161,8 @@ Two engineering findings worth recording:
 
 **Caching every response before anything else made the work survivable.** The labelling run was interrupted mid-way and resumed with 531 responses intact at zero cost. The same property let training resume after the embedding quota was exhausted.
 
+**A degraded dependency is invisible unless the system reports it.** The free embedding tier allows roughly 1,000 requests per day and ran out at 993. The classifier needs an embedding to predict, so every subsequent request fell back to a fixed tier — correct behaviour, and the reason the service kept answering. But from the outside it looked like a working classifier that had decided everything was T2. Only `prediction_source: "no_embedding"` in the API response made the difference visible. Degradation that is not reported is indistinguishable from a bug, and this one cost an hour of misdiagnosis.
+
 ## 7. Limitations
 
 Stated plainly, because a limitations section that names nothing reads as untested.
@@ -157,7 +175,8 @@ Stated plainly, because a limitations section that names nothing reads as untest
 6. **The verifier's threshold (0.7) and escalation cap (2) are unvalidated.** They come from the specification, not from tuning. Tuning them would require a labelled set of good and bad *answers*, which this project does not have — the empirical labels record whether a model was correct, not whether the judge agreed with it.
 7. **The judge is itself a cheap model** and will sometimes be wrong. Its scores are a filter, not ground truth.
 8. **Quality retention vs. an always-T3 baseline was not measured directly.** What is reported is how often the *predicted tier was sufficient* (86.0%), which is a proxy — it does not measure whether the returned answer was actually good.
-9. **Not yet deployed.** Deployment configuration for Render and Vercel is written and the stack runs end to end locally, but no public URL exists.
+9. **The test split was evaluated twice, not once.** See the disclosure in §3.1. The cause was a feature leak found after the first evaluation; no tuning occurred between runs, and both results are published. It is still a weaker guarantee than the specification asks for.
+10. **Not yet deployed.** Deployment configuration for Render and Vercel is written, and the full stack has been verified running locally — screenshots in `docs/screenshots/` are from `localhost`. No public URL exists yet.
 
 ## 8. Conclusion
 
