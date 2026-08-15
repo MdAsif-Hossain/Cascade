@@ -1,62 +1,63 @@
+<div align="center">
+
 # Cascade
 
-An AI study assistant that routes each question to the cheapest model likely to answer it correctly, has a **different provider** check the answer, and escalates only when that check fails.
+**An AI study assistant that routes each question to the cheapest model that can answer it — then has a *different* provider check the answer before it reaches the student.**
 
-Built to run entirely on free provider tiers — $0 inference, $0 hosting.
+Frontier-quality tutoring at a fraction of frontier cost. Running end to end on free tiers: **$0 inference, $0 hosting.**
 
-Capstone project for the Ostad AI Engineering programme.
+[![CI](https://github.com/MdAsif-Hossain/Cascade/actions/workflows/ci.yml/badge.svg)](https://github.com/MdAsif-Hossain/Cascade/actions/workflows/ci.yml)
+![Tests](https://img.shields.io/badge/tests-323-4B7B6E)
+![mypy](https://img.shields.io/badge/mypy-strict-4B7B6E)
+![Python](https://img.shields.io/badge/python-3.11-3776AB)
+![Next.js](https://img.shields.io/badge/Next.js-14-000000)
 
-**Live:** https://cascade-red-eight.vercel.app
-**API:** https://cascade-api-5w68.onrender.com ([docs](https://cascade-api-5w68.onrender.com/docs))
+### [→ Try it live](https://cascade-red-eight.vercel.app) · [API docs](https://cascade-api-5w68.onrender.com/docs) · [Full report](docs/final-report.md)
 
-Both are on free tiers, so the first request after a quiet spell can take up to 50 seconds while the backend wakes.
+*First request may take ~50s while the free-tier backend wakes.*
+
+</div>
 
 ---
 
-## What it does
+![Answer with routing trace](docs/screenshots/ask-answered.png)
+
+<div align="center"><i>Every answer ships with its routing trace — which model replied, how fast, what the checker scored it. Transparency is the feature, not debug output.</i></div>
+
+---
+
+## The idea
+
+Most student questions don't need an expensive model. **I measured this: 84.2% of 1,249 benchmark questions were answered correctly by the cheapest model I had access to.** The hard part isn't saving money — it's knowing *which* questions you can be cheap about, without silently giving someone a worse answer.
+
+Cascade's answer to that is three components:
 
 ```
 question → difficulty classifier → cheapest capable tier → answer
                                           ↓
-                          verifier (heuristics, then a judge on
-                          a different provider than the answerer)
+                          verifier (heuristics, then an LLM judge
+                          on a different provider than the answerer)
                                           ↓
                           pass → return    fail → escalate one tier
 ```
 
-Every answer ships with its routing trace — which model answered, how long it took, what the checker scored it, and whether it was escalated. That transparency is a product feature, not debug output.
+## What makes this interesting
 
-## Key results
+**A classifier trained on empirical labels, not proxies.** Every training label was produced by actually running the question through a real T1 model and a real T2 model and grading the output against ground truth. The label *is* the routing decision, which is why it beats guessing from question length or dataset tags.
 
-All figures measured, not estimated. Reproduce with `ml/eval/run_eval.py`.
+**A verifier that can't cheat.** Models systematically prefer their own output, so the judge is structurally barred from running on the provider that produced the answer — `exclude_providers` is passed into the router before selection, not checked afterwards. Two tests assert it in both directions.
 
-### The honest headline
+**Catalog drift detection that earned itself.** Gemini advertises `gemini-2.5-flash`, `gemini-2.5-pro` and `gemini-2.5-flash-lite` in its model list. All three return HTTP 404 when called. A tier table built from the catalog was silently unroutable — [ADR-0002](docs/adr/0002-catalog-listing-is-not-callability.md).
 
-**The difficulty classifier did not beat the majority-class baseline.** On the held-out test split it scored **83.33% accuracy against a baseline of 84.00%** — marginally *worse* than always guessing the most common tier.
+**A published negative result.** The classifier ties a majority-class baseline. That's in the README, the report headline, and the abstract — not buried. More on that below.
 
-| Metric | Value |
-|---|---|
-| Test accuracy | 0.8333 |
-| Majority-class baseline | 0.8400 |
-| Improvement over baseline | **−0.0067** |
-| Macro-F1 | 0.3550 |
-| Test split size | 150 questions |
+## Results
 
-Per class:
+All measured. Reproduce with `ml/eval/run_eval.py`.
 
-| Tier | Precision | Recall | F1 | Support |
-|---|---:|---:|---:|---:|
-| T1 | 0.85 | 0.98 | 0.91 | 126 |
-| T2 | 0.50 | 0.09 | 0.15 | 22 |
-| T3 | 0.00 | 0.00 | 0.00 | 2 |
+### The ablation — the finding I'd defend
 
-It catches 2 of 22 T2 questions and 0 of 2 T3 questions.
-
-It is not degenerate, though — it does discriminate. On the live site it routes "What is photosynthesis?" to T1 at 0.99 confidence and "Prove that the square root of 2 is irrational" to T2 at 0.90. Those are anecdotes; the table above is the measurement. See [`docs/final-report.md`](docs/final-report.md) for why it fails and what that means for the design.
-
-### Ablation — the study that did work
-
-Validation split. This is the artifact that answers whether each feature family earns its place.
+Does each feature family earn its keep, or is one of them decoration?
 
 | Model | Features | Dims | Accuracy | Macro-F1 |
 |---|---|---:|---:|---:|
@@ -67,89 +68,41 @@ Validation split. This is the artifact that answers whether each feature family 
 | boosting | embedding | 256 | 0.805 | 0.393 |
 | **boosting** | **both** | **278** | **0.819** | **0.423** |
 
-Macro-F1 rises monotonically — handcrafted 0.334, embeddings 0.393, both 0.423 — so both families carry signal and the combination is additive. Gradient boosting beats logistic regression on every feature set. No configuration beats the baseline on accuracy; boosting on handcrafted features alone ties it exactly, which is what a model that has learned to always say T1 looks like.
+Macro-F1 climbs monotonically — 0.334 → 0.393 → 0.423 — so both families carry signal and combining them is genuinely additive. That's what justifies putting an embedding API call on the hot path.
 
-### Empirical labels
+### The headline result is negative
 
-1,249 questions from ARC-Easy, ARC-Challenge, GSM8K, SciQ and OpenBookQA, each run through a real T1 model and, on failure, a real T2 model, then graded against known-correct answers.
+**On the held-out test split the classifier scored 83.33% against an 84.00% majority-class baseline** — marginally worse than always guessing the most common tier. It finds 2 of 22 T2 questions and 0 of 2 T3.
 
-| Label | Count | Share |
-|---|---:|---:|
-| T1 — small model was enough | 1,052 | 84.2% |
-| T2 — needed a mid model | 179 | 14.3% |
-| T3 — both failed | 18 | 1.4% |
+| Tier | Precision | Recall | F1 | Support |
+|---|---:|---:|---:|---:|
+| T1 | 0.85 | 0.98 | 0.91 | 126 |
+| T2 | 0.50 | 0.09 | 0.15 | 22 |
+| T3 | 0.00 | 0.00 | 0.00 | 2 |
 
-**84.2% of questions were answered correctly by the cheapest model.** That is the project's central premise confirmed — and simultaneously the reason the classifier struggles, since there is very little minority class to learn from.
+Why: the labels are 84% / 14% / 1.4%, so there's almost no minority class to learn from — and whether a model gets a question right may be a property of *that model's training*, not of anything readable in the question text.
 
-### Cost
+**What makes the failure survivable is the verifier.** 14% of questions get routed too cheaply; those are caught by a second model from a different provider and escalated. Cost reduction without that check would just be quality reduction. The component I'd filed as plumbing turned out to be the one holding the system up.
+
+The report states this in §3, discloses that the test split was evaluated twice and why, and lists ten limitations in §8.
+
+### Cost and latency
 
 | Metric | Value |
 |---|---|
 | Estimated cost reduction vs. always-T3 | 97.6% |
 | Predicted tier sufficient | 86.0% |
-| Under-predicted (verifier must escalate) | 14.0% |
+| Groq / Gemini / OpenRouter latency | 126 ms / 908 ms / 27.5 s |
 
-**These are counterfactual.** Every call ran on a free tier; no money was spent. Costs come from published per-token list prices retrieved from OpenRouter's API on 2026-08-14. The 97.6% figure is largely a consequence of the classifier predicting T1 almost always, and must be read together with the 14% under-prediction rate that the verifier then has to absorb.
-
-### Calibration
-
-Expected calibration error **0.1258** on validation. The model is overconfident where it matters most: in the 0.8–1.0 band, which holds 136 of 149 validation questions, it claims 0.946 and is right 0.824 of the time. Confidence is therefore *not* used as a routing input.
-
-### Measured provider latency
-
-| Provider | Model | Latency |
-|---|---|---|
-| Groq | `llama-3.1-8b-instant` | 126 ms |
-| Gemini | `gemini-flash-lite-latest` | 908 ms |
-| OpenRouter | `openai/gpt-oss-20b:free` | 27.5 s |
-
-Tier candidate ordering follows measured latency, not price.
-
-## Screenshots
-
-The routing trace under an answer — the element the interface is built around. An escalation is drawn as a visible step upward, not a footnote.
-
-![Answer with routing trace](docs/screenshots/ask-answered.png)
-
-| History | Metrics |
-|---|---|
-| ![History](docs/screenshots/history.png) | ![Metrics](docs/screenshots/metrics.png) |
-
-Captured from the live site.
+Cost figures are **counterfactual** — computed from published per-token list prices. Every call ran on a free tier; no money was spent. And 97.6% is largely a consequence of the classifier predicting T1 almost always, which is a caveat I state rather than a number I lead with.
 
 ## Architecture
 
 ![Cascade architecture](docs/architecture.png)
 
-```
-Next.js (Vercel)
-      │  HTTPS
-      ▼
-FastAPI gateway (Render, Docker)
-      ├─ Embedder ──────────► gemini-embedding-001
-      ├─ Difficulty classifier (sklearn, 565 KB .joblib)
-      ├─ Router ────────────► tier selection + failover + circuit breaker
-      ├─ Provider adapters ─► Groq │ Gemini │ OpenRouter
-      ├─ Verifier ──────────► heuristics, then cross-provider LLM judge
-      ├─ Escalation loop
-      └─ Catalog poller ────► drift detection
-      ▼
-Supabase Postgres
-```
+**Request lifecycle:** cache lookup on `sha256(question + subject + level)` → embed → classify → route to a healthy model in that tier (failing over within it) → heuristic screen → cross-provider judge → escalate if scored below 0.7, capped at two → persist the full trace.
 
-### Request lifecycle
-
-1. `POST /api/v1/ask` receives the question
-2. Cache lookup on `sha256(normalised question + subject + level)` — a hit returns immediately
-3. The question is embedded and the classifier predicts a tier
-4. The router picks a healthy model in that tier, failing over within it on error
-5. The verifier screens the answer with heuristics, then a judge on a **different provider**
-6. Score below 0.7 escalates one tier and repeats, capped at two escalations
-7. The full trace is persisted and returned alongside the answer
-
-### Tiers
-
-Capability bands, not providers — each lists candidates across several providers so a tier still resolves when one disappears. Every model was verified callable before being listed, because Gemini advertises models that return 404 (see ADR-0002).
+**Tiers are capability bands, not providers**, so a tier still resolves when a provider disappears. Every model was verified callable before being listed.
 
 | Tier | For | Preferred model |
 |---|---|---|
@@ -157,14 +110,53 @@ Capability bands, not providers — each lists candidates across several provide
 | T2 | multi-step reasoning, short derivations | `groq/llama-3.3-70b-versatile` |
 | T3 | hard multi-step maths, subtle reasoning | `gemini/gemini-3.5-flash` |
 
+## Engineering
+
+**323 tests**, `ruff` and `mypy --strict` clean, CI on every push. The suite passes **offline with no API keys set** — which is what proves nothing quietly reaches the network.
+
+**The provider contract suite was written before any adapter existed.** 28 shared assertions that all three adapters must satisfy. Three providers implemented independently will look correct and behave differently — different token-usage keys, different error envelopes — and those divergences don't crash, they corrupt your cost metric. The suite caught exactly that.
+
+Some bugs worth reading about, all documented:
+
+| Bug | Why it mattered |
+|---|---|
+| Reasoning models return `content: null` with `finish_reason: length` | HTTP 200 carrying no answer. Returning it as empty would make the verifier score a provider truncation as question difficulty |
+| OpenRouter reports upstream 502s **inside** an HTTP 200 | Classified as a permanent fault when it was a transient outage that should fail over |
+| Rate limits are metered in **tokens**, not requests | Groq allows 14,400 req/day but 6,000 tokens/min. A token-budget pacer took the labelling run from 9 errors in 60 to **1 in 1,249** |
+| `num_choices` train/inference leak | 76% of training rows had 4 answer options; a real question has 0. Fixed, with a regression test |
+
 ## Stack
 
-**Backend** — Python 3.11, FastAPI, Pydantic v2, `httpx` (async), SQLAlchemy 2.0, scikit-learn, `structlog`, `tenacity`
-**Frontend** — Next.js 14 App Router, TypeScript strict, Tailwind
-**Data** — SQLite locally, Supabase Postgres in production
-**Testing** — `pytest`, `respx`, `ruff`, `mypy --strict`, GitHub Actions
+**Backend** Python 3.11 · FastAPI · Pydantic v2 · httpx (async) · SQLAlchemy 2.0 · scikit-learn · structlog · tenacity
+**Frontend** Next.js 14 App Router · TypeScript strict · Tailwind
+**Data** SQLite locally · Supabase Postgres in production
+**Testing** pytest · respx · ruff · mypy --strict · GitHub Actions
+**Deploy** Docker on Render · Vercel · cron keep-alive
 
-## Layout
+## Run it locally
+
+```bash
+# Backend
+cd backend
+python -m venv .venv && source .venv/bin/activate   # .venv/Scripts/activate on Windows
+pip install -r requirements-dev.txt
+cp ../.env.example ../.env                          # add your free API keys
+uvicorn app.main:app --reload                       # → http://127.0.0.1:8000/docs
+
+# Frontend
+cd frontend && npm install && npm run dev           # → http://localhost:3000
+
+# Reproduce the ML pipeline
+cd ml
+python label_empirical.py     # empirical labels, caches every response
+python train_classifier.py    # train + persist
+python eval/ablation.py       # ablation table
+python eval/run_eval.py       # final test evaluation — run once
+```
+
+Needs free keys from [Groq](https://console.groq.com), [Google AI Studio](https://aistudio.google.com) and [OpenRouter](https://openrouter.ai).
+
+## Repository
 
 ```
 backend/app/
@@ -174,82 +166,28 @@ backend/app/
   routing/         classifier, router, tiers, features, breaker
   verification/    verifier, heuristics
   catalog/         poller, drift
-  services/        ask (the escalation loop)
-ml/
-  label_empirical.py   empirical difficulty labelling
-  train_classifier.py  training and persistence
-  eval/                ablation, calibration, final evaluation
+  services/        ask — the escalation loop
+ml/                labelling, training, ablation, calibration, evaluation
 frontend/app/      ask, history, metrics
+docs/adr/          architecture decision records
 ```
 
-## Deployment
+## Documentation
 
-| Component | Host | Notes |
-|---|---|---|
-| Frontend | Vercel | root directory `frontend`, one env var: `NEXT_PUBLIC_API_BASE` |
-| API | Render | Docker, `backend/Dockerfile`, build context `backend`, free tier |
-| Database | Supabase | Postgres via the session pooler (port 5432 — the direct host is IPv6-only) |
-| Keep-alive | cron-job.org | pings `/health` every 10 minutes so the free tier doesn't sleep |
+| | |
+|---|---|
+| [Final report](docs/final-report.md) ([.docx](docs/Cascade-Final-Report.docx)) | Full write-up, including what didn't work |
+| [ADR-0001](docs/adr/0001-provider-selection.md) | Why three providers, not four |
+| [ADR-0002](docs/adr/0002-catalog-listing-is-not-callability.md) | A listed model is not a callable model |
+| [ADR-0003](docs/adr/0003-empirical-labels-and-pacing.md) | Empirical labels, and pacing by tokens |
+| [ADR-0004](docs/adr/0004-verification-before-cost-saving.md) | Verification is what makes cheapness safe |
+| [ops/](ops/README.md) | Deployment notes |
+| [ml/results/](ml/results/) | Raw evaluation output |
 
-Render needs `GROQ_API_KEY`, `GOOGLE_AI_STUDIO_API_KEY`, `OPENROUTER_API_KEY`, `DATABASE_URL` and `ENVIRONMENT`. Vercel needs only `NEXT_PUBLIC_API_BASE` — provider keys must never go there, since anything prefixed `NEXT_PUBLIC_` is compiled into the browser bundle. Full notes in [`ops/README.md`](ops/README.md).
+---
 
-## Setup
+<div align="center">
 
-```bash
-# Backend
-cd backend
-python -m venv .venv && .venv/Scripts/activate    # or source .venv/bin/activate
-pip install -r requirements-dev.txt
-cp ../.env.example ../.env                        # then add your API keys
-uvicorn app.main:app --reload                     # http://127.0.0.1:8000/docs
+Capstone project · Ostad AI Engineering · **[Md. Asif Hossain](https://github.com/MdAsif-Hossain)**
 
-# Frontend
-cd frontend
-npm install
-npm run dev                                       # http://localhost:3000
-
-# Reproduce the ML pipeline
-cd ml
-python label_empirical.py      # generates labels, caches every response
-python train_classifier.py     # trains and persists the classifier
-python eval/ablation.py        # ablation table
-python eval/calibration.py     # calibration curve
-python eval/run_eval.py        # final test evaluation — run once
-```
-
-Requires free API keys for [Groq](https://console.groq.com), [Google AI Studio](https://aistudio.google.com), and [OpenRouter](https://openrouter.ai). See `.env.example`.
-
-## Tests
-
-323 tests. `ruff` and `mypy --strict` clean. All HTTP is mocked with `respx`, so the suite passes offline with no API keys set — which is also what proves nothing quietly reaches the network.
-
-```bash
-cd backend && pytest -q
-```
-
-The provider contract suite (`tests/providers/contract.py`) is 28 shared assertions every adapter must satisfy, written before any adapter existed. It caught three real bugs, documented in [ADR-0002](docs/adr/0002-catalog-listing-is-not-callability.md).
-
-Two tests worth pointing at:
-
-- `test_verifier.py::TestCrossProviderConstraint` — asserts the judge never runs on the provider that produced the answer, in both directions
-- `test_features.py::test_answer_options_do_not_change_the_features` — a regression guard for a train/inference feature leak that shipped once already
-
-## What didn't work
-
-The classifier ties a majority-class baseline. The ablation is a real finding, the verifier demonstrably absorbs the 14% of questions routed too cheaply, and catalog drift caught Gemini advertising three models that 404 — but the headline component underperformed, and [the report](docs/final-report.md) says so in §3 and lists ten limitations in §7.
-
-## Docs
-
-- [`docs/final-report.md`](docs/final-report.md) — full write-up, including what did not work ([.docx](docs/Cascade-Final-Report.docx))
-- [`docs/proposal.md`](docs/proposal.md) — original proposal
-- [`docs/adr/`](docs/adr/) — architecture decision records
-  - [0001](docs/adr/0001-provider-selection.md) — why three providers, not four
-  - [0002](docs/adr/0002-catalog-listing-is-not-callability.md) — a listed model is not a callable model
-  - [0003](docs/adr/0003-empirical-labels-and-pacing.md) — empirical labels, and pacing by tokens
-  - [0004](docs/adr/0004-verification-before-cost-saving.md) — verification is what makes cheapness safe
-- [`ops/README.md`](ops/README.md) — deployment notes
-- [`ml/results/`](ml/results/) — raw evaluation output: ablation, calibration, test results, confusion matrix
-
-## Licence
-
-Coursework project, submitted as the capstone for the Ostad AI Engineering programme.
+</div>
