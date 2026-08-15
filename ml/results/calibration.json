@@ -1,29 +1,36 @@
 {
   "buckets": [
     {
+      "range": "0.5-0.6",
+      "n": 1,
+      "mean_confidence": 0.5611,
+      "accuracy": 1.0,
+      "gap": 0.4389
+    },
+    {
       "range": "0.6-0.7",
-      "n": 7,
-      "mean_confidence": 0.6482,
-      "accuracy": 0.7143,
-      "gap": 0.0661
+      "n": 4,
+      "mean_confidence": 0.6744,
+      "accuracy": 0.5,
+      "gap": -0.1744
     },
     {
       "range": "0.7-0.8",
       "n": 8,
-      "mean_confidence": 0.7469,
-      "accuracy": 0.375,
-      "gap": -0.3719
+      "mean_confidence": 0.7542,
+      "accuracy": 0.875,
+      "gap": 0.1208
     },
     {
       "range": "0.8-1.0",
-      "n": 134,
-      "mean_confidence": 0.9494,
-      "accuracy": 0.8433,
-      "gap": -0.1061
+      "n": 136,
+      "mean_confidence": 0.9459,
+      "accuracy": 0.8235,
+      "gap": -0.1224
     }
   ],
-  "expected_calibration_error": 0.1185,
+  "expected_calibration_error": 0.1258,
   "under_predicted_rate": 0.1342,
-  "over_predicted_rate": 0.0537,
+  "over_predicted_rate": 0.047,
   "split": "validation"
 }

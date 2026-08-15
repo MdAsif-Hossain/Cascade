@@ -9,21 +9,21 @@
     {
       "model": "logistic",
       "feature_set": "handcrafted",
-      "n_features": 23,
-      "accuracy": 0.3893,
-      "macro_f1": 0.2265,
-      "accuracy_over_baseline": -0.4564,
+      "n_features": 22,
+      "accuracy": 0.396,
+      "macro_f1": 0.2295,
+      "accuracy_over_baseline": -0.4497,
       "per_class": {
         "T1": {
-          "precision": 0.8438,
-          "recall": 0.4286,
-          "f1": 0.5684,
+          "precision": 0.8462,
+          "recall": 0.4365,
+          "f1": 0.5759,
           "support": 126
         },
         "T2": {
-          "precision": 0.0784,
+          "precision": 0.08,
           "recall": 0.1905,
-          "f1": 0.1111,
+          "f1": 0.1127,
           "support": 21
         },
         "T3": {
@@ -65,7 +65,7 @@
     {
       "model": "logistic",
       "feature_set": "both",
-      "n_features": 279,
+      "n_features": 278,
       "accuracy": 0.6711,
       "macro_f1": 0.3039,
       "accuracy_over_baseline": -0.1745,
@@ -93,21 +93,21 @@
     {
       "model": "boosting",
       "feature_set": "handcrafted",
-      "n_features": 23,
-      "accuracy": 0.8322,
-      "macro_f1": 0.3293,
-      "accuracy_over_baseline": -0.0134,
+      "n_features": 22,
+      "accuracy": 0.8456,
+      "macro_f1": 0.3342,
+      "accuracy_over_baseline": 0.0,
       "per_class": {
         "T1": {
-          "precision": 0.8542,
-          "recall": 0.9762,
-          "f1": 0.9111,
+          "precision": 0.8562,
+          "recall": 0.9921,
+          "f1": 0.9191,
           "support": 126
         },
         "T2": {
-          "precision": 0.2,
+          "precision": 0.3333,
           "recall": 0.0476,
-          "f1": 0.0769,
+          "f1": 0.0833,
           "support": 21
         },
         "T3": {
@@ -149,21 +149,21 @@
     {
       "model": "boosting",
       "feature_set": "both",
-      "n_features": 279,
-      "accuracy": 0.8121,
-      "macro_f1": 0.4203,
-      "accuracy_over_baseline": -0.0336,
+      "n_features": 278,
+      "accuracy": 0.8188,
+      "macro_f1": 0.4227,
+      "accuracy_over_baseline": -0.0268,
       "per_class": {
         "T1": {
-          "precision": 0.8561,
-          "recall": 0.9444,
-          "f1": 0.8981,
+          "precision": 0.8571,
+          "recall": 0.9524,
+          "f1": 0.9023,
           "support": 126
         },
         "T2": {
-          "precision": 0.2,
+          "precision": 0.25,
           "recall": 0.0476,
-          "f1": 0.0769,
+          "f1": 0.08,
           "support": 21
         },
         "T3": {

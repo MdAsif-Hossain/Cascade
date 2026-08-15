@@ -1,8 +1,8 @@
 {
-  "trained_at": "2026-08-14T18:28:19.858966+00:00",
+  "trained_at": "2026-08-14T18:53:35.311646+00:00",
   "model": "boosting",
   "feature_set": "both",
-  "n_features": 279,
+  "n_features": 278,
   "embedding_model": "gemini-embedding-001",
   "embedding_dimensions": 256,
   "handcrafted_features": [
@@ -15,7 +15,6 @@
     "has_math_operator",
     "log_sentence_count",
     "log_comma_count",
-    "num_choices",
     "qword_what",
     "qword_why",
     "qword_how",
@@ -49,8 +48,8 @@
   },
   "validation": {
     "majority_baseline_accuracy": 0.8456,
-    "accuracy": 0.8121,
-    "macro_f1": 0.4203
+    "accuracy": 0.8188,
+    "macro_f1": 0.4227
   },
   "test": "not evaluated here \u2014 see ml/eval/run_eval.py, run once"
 }

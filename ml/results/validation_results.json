@@ -2,14 +2,14 @@
   {
     "model_name": "logistic",
     "feature_set": "handcrafted",
-    "accuracy": 0.38926174496644295,
-    "macro_f1": 0.22651072124756336
+    "accuracy": 0.3959731543624161,
+    "macro_f1": 0.22953076223484012
   },
   {
     "model_name": "boosting",
     "feature_set": "handcrafted",
-    "accuracy": 0.8322147651006712,
-    "macro_f1": 0.32934472934472936
+    "accuracy": 0.8456375838926175,
+    "macro_f1": 0.3341503267973856
   },
   {
     "model_name": "logistic",
@@ -32,7 +32,7 @@
   {
     "model_name": "boosting",
     "feature_set": "both",
-    "accuracy": 0.8120805369127517,
-    "macro_f1": 0.42025019006151076
+    "accuracy": 0.8187919463087249,
+    "macro_f1": 0.42265664160401
   }
 ]
